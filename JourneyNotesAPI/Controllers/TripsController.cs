@@ -36,7 +36,7 @@ namespace JourneyNotesAPI.Controllers
 
             _client = new DocumentClient(new Uri(endpointUri), key);
         }
-        
+
         // GET: api/Trip
         // All trips of one person
         [HttpGet]
@@ -69,12 +69,33 @@ namespace JourneyNotesAPI.Controllers
 
         // POST: api/trip
         [HttpPost]
-        public async Task<ActionResult<string>> PostAsync([FromBody] Trip trip)
+        public async Task<ActionResult<string>> PostAsync([FromBody] NewTrip newTrip)
         {
+            Trip trip = new Trip();
+
+            //var person = HttpContext.User;
+            var person = 70;
+
+            // Determining the tripId number
+            FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
+            IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
+            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
+            $"SELECT * FROM C WHERE C.PersonId = {person}", queryOptions);
+            var tripCount = query.ToList().Count;
+
+            trip.TripId = tripCount + 1;
+            trip.PersonId = person;
+            trip.Headline = newTrip.Headline;
+            trip.Description = newTrip.Description;
+            trip.StartDate = newTrip.StartDate;
+            trip.EndDate = newTrip.EndDate;
+            trip.MainPhotoUrl = string.Empty;  // this needs to be updated! And the picture will be deleted at some point - we will not store huge pics.
+            trip.MainPhotoSmallUrl = string.Empty;
+            
             Document document = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip), trip);
             return Ok(document.Id);
         }
-        
+
         // PUT: api/Trip/5
         [HttpPut("{id}")]
         public void PutTrip(int id, [FromBody] string value)
