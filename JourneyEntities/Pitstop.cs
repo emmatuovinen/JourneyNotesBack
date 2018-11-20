@@ -28,4 +28,21 @@ namespace JourneyEntities
 
         public string Address { get; set; }
     }
+
+    public class NewPitstop
+    {       
+        public string Title { get; set; }
+
+        public string Note { get; set; }
+
+        public DateTime PitstopDate { get; set; }
+
+        public int TripId { get; set; }
+
+        public int Latitude { get; set; }
+
+        public int Longitude { get; set; }
+
+        public string Address { get; set; }
+    }
 }

@@ -15,7 +15,7 @@ namespace JourneyNotesAPI.Controllers
     [EnableCors("MyPolicy")]
     [Route("api/[controller]")]
     [ApiController]
-    public class TripController : ControllerBase
+    public class TripsController : ControllerBase
     {
         private readonly IConfiguration _configuration;
         private readonly DocumentClient _client;
@@ -24,7 +24,7 @@ namespace JourneyNotesAPI.Controllers
         private const string _collectionNameTrip = "Trip";
         private const string _collectionNamePitstop = "Pitstop";
 
-        public TripController(IConfiguration configuration)
+        public TripsController(IConfiguration configuration)
         {
             _configuration = configuration;
 
@@ -38,6 +38,7 @@ namespace JourneyNotesAPI.Controllers
         }
         
         // GET: api/Trip
+        // All trips of one person
         [HttpGet]
         public ActionResult<IEnumerable<string>> GetTrips(string personID)
         {
@@ -53,10 +54,17 @@ namespace JourneyNotesAPI.Controllers
         }
 
         // GET: api/Trip/5
+        // One trip by TripId
         [HttpGet("{id}", Name = "GetTrip")]
-        public string GetTrip(int id)
+        public ActionResult<string> GetTrip(string id)
         {
-            return "value";
+            FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
+            IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
+            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
+            $"SELECT * FROM C WHERE C.TripId = '{id}'", queryOptions);
+            var tripDetails = query.ToList();
+
+            return Ok(tripDetails);
         }
 
         // POST: api/trip

@@ -15,7 +15,7 @@ namespace JourneyNotesAPI.Controllers
     [EnableCors("MyPolicy")]
     [Route("api/[controller]/[Action]")]
     [ApiController]
-    public class PersonController : ControllerBase
+    public class PeopleController : ControllerBase
     {
         private readonly IConfiguration _configuration;
         private readonly DocumentClient _client;
@@ -24,7 +24,7 @@ namespace JourneyNotesAPI.Controllers
         private const string _collectionNameTrip = "Trip";
         private const string _collectionNamePitstop = "Pitstop";
 
-        public PersonController(IConfiguration configuration)
+        public PeopleController(IConfiguration configuration)
         {
             _configuration = configuration;
 

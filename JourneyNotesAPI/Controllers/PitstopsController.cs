@@ -15,7 +15,7 @@ namespace JourneyNotesAPI.Controllers
     [EnableCors("MyPolicy")]
     [Route("api/[controller]/[Action]")]
     [ApiController]
-    public class PitstopController : ControllerBase
+    public class PitstopsController : ControllerBase
     {
         private readonly IConfiguration _configuration;
         private readonly DocumentClient _client;
@@ -24,7 +24,7 @@ namespace JourneyNotesAPI.Controllers
         private const string _collectionNameTrip = "Trip";
         private const string _collectionNamePitstop = "Pitstop";
 
-        public PitstopController(IConfiguration configuration)
+        public PitstopsController(IConfiguration configuration)
         {
             _configuration = configuration;
 
@@ -64,8 +64,10 @@ namespace JourneyNotesAPI.Controllers
 
         // POST/trip
         [HttpPost]
-        public async Task<ActionResult<string>> PostAsync([FromBody] Pitstop pitstop)
+        public async Task<ActionResult<string>> PostAsync([FromBody] NewPitstop pitstop)
         {
+            Pitstop pitstopDb = new Pitstop();
+
             Document document = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop), pitstop);
             return Ok(document.Id);
         }
