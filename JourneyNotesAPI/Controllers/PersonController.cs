@@ -17,7 +17,7 @@ namespace JourneyNotesAPI.Controllers
         [HttpGet]
         public IEnumerable<string> GetPersons()
         {
-            return new string[] { "value1", "value2" };
+            return new string[] { "valueX", "valueY" };
         }
 
         // GET: api/Person/5
