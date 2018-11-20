@@ -14,6 +14,8 @@ namespace JourneyEntities
 
         public DateTime PitstopDate { get; set; }
 
+        public string PhotoOriginalUrl { get; set; }
+
         public string PhotoLargeUrl { get; set; }
 
         public string PhotoMediumUrl { get; set; }

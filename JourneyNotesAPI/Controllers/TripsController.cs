@@ -37,7 +37,7 @@ namespace JourneyNotesAPI.Controllers
             _client = new DocumentClient(new Uri(endpointUri), key);
         }
 
-        // GET: api/Trip
+        // GET: api/Trips
         // All trips of one person
         [HttpGet]
         public ActionResult<IEnumerable<string>> GetTrips(string personID)
@@ -53,7 +53,7 @@ namespace JourneyNotesAPI.Controllers
             return Ok(tripList);
         }
 
-        // GET: api/Trip/5
+        // GET: api/Trips/5
         // One trip by TripId
         //[HttpGet("{id}", Name = "GetTrip")]
         //public ActionResult<string> GetTrip(string id)
@@ -67,6 +67,7 @@ namespace JourneyNotesAPI.Controllers
         //    return Ok(tripDetails);
         //}
 
+        // GET api/Trips/5
         // One trip by TripId + the pitstops under it
         [HttpGet("{Id}", Name = "GetTripAndPitstops")]
         public ActionResult<string> GetTripAndPitstops(int Id)
@@ -87,7 +88,7 @@ namespace JourneyNotesAPI.Controllers
             return Ok(tripDetails);
         }
 
-        // POST: api/trip
+        // POST: api/trips
         [HttpPost]
         public async Task<ActionResult<string>> PostAsync([FromBody] NewTrip newTrip)
         {

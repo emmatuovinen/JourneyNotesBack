@@ -48,7 +48,7 @@ namespace JourneyNotesAPI.Controllers
         }
 
 
-        // GET: api/Person
+        // GET: api/Pitstop
         [HttpGet]
         public IEnumerable<string> GetPitstops()
         {
@@ -62,16 +62,38 @@ namespace JourneyNotesAPI.Controllers
             return "value";
         }
 
-        // POST/trip
+        // POST/Pitstop
         [HttpPost]
-        public async Task<ActionResult<string>> PostAsync([FromBody] NewPitstop pitstop)
+        public async Task<ActionResult<string>> PostPitstop([FromBody] NewPitstop newPitstop)
         {
-            Pitstop pitstopDb = new Pitstop();
+            // We need to get the TripId from the http request!
+
+            Pitstop pitstop = new Pitstop();
+            var id = newPitstop.TripId;
+
+            FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
+            IQueryable<Pitstop> query = _client.CreateDocumentQuery<Pitstop>(
+            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop),
+            $"SELECT * FROM C WHERE C.TripId = {id}", queryOptions);
+            var pitstopCount = query.ToList().Max(a => a.PitstopId);
+
+            pitstop.PitstopId = pitstopCount + 1;
+            pitstop.Title = newPitstop.Title;
+            pitstop.Note = newPitstop.Note;
+            pitstop.PitstopDate = newPitstop.PitstopDate;
+            pitstop.PhotoOriginalUrl = string.Empty; // Remember to update
+            pitstop.PhotoLargeUrl = string.Empty;
+            pitstop.PhotoMediumUrl = string.Empty;
+            pitstop.PhotoSmallUrl = string.Empty; // will be updated when the queue has done it's job.
+            pitstop.TripId = newPitstop.TripId;
+            pitstop.Latitude = newPitstop.Latitude;
+            pitstop.Longitude = newPitstop.Longitude;
+            pitstop.Address = newPitstop.Address;
 
             Document document = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop), pitstop);
             return Ok(document.Id);
         }
-       
+
         // PUT: api/Person/5
         [HttpPut("{id}")]
         public void PutPitstop(int id, [FromBody] string value)
