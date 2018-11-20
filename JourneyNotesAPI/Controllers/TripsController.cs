@@ -55,14 +55,34 @@ namespace JourneyNotesAPI.Controllers
 
         // GET: api/Trip/5
         // One trip by TripId
-        [HttpGet("{id}", Name = "GetTrip")]
-        public ActionResult<string> GetTrip(string id)
+        //[HttpGet("{id}", Name = "GetTrip")]
+        //public ActionResult<string> GetTrip(string id)
+        //{
+        //    FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
+        //    IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
+        //    UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
+        //    $"SELECT * FROM C WHERE C.TripId = '{id}'", queryOptions);
+        //    var tripDetails = query.ToList();
+
+        //    return Ok(tripDetails);
+        //}
+
+        // One trip by TripId + the pitstops under it
+        [HttpGet("{Id}", Name = "GetTripAndPitstops")]
+        public ActionResult<string> GetTripAndPitstops(int Id)
         {
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
-            $"SELECT * FROM C WHERE C.TripId = '{id}'", queryOptions);
-            var tripDetails = query.ToList();
+            $"SELECT * FROM C WHERE C.TripId = {Id}", queryOptions);
+            Trip tripDetails = query.ToList().FirstOrDefault();
+
+            IQueryable<Pitstop> query2 = _client.CreateDocumentQuery<Pitstop>(
+            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop),
+            $"SELECT * FROM C WHERE C.TripId = {Id}", queryOptions);
+            var pitstops = query2.ToList();
+
+            tripDetails.Pitstops = pitstops;
 
             return Ok(tripDetails);
         }
@@ -81,7 +101,7 @@ namespace JourneyNotesAPI.Controllers
             IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
             $"SELECT * FROM C WHERE C.PersonId = {person}", queryOptions);
-            var tripCount = query.ToList().Count;
+            var tripCount = query.ToList().Max(a => a.TripId);
 
             trip.TripId = tripCount + 1;
             trip.PersonId = person;
