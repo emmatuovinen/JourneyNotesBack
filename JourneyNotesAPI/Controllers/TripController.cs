@@ -2,9 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using JourneyEntities;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.Documents;
+using Microsoft.Azure.Documents.Client;
+using Microsoft.Extensions.Configuration;
 
 namespace JourneyNotesAPI.Controllers
 {
@@ -13,11 +17,39 @@ namespace JourneyNotesAPI.Controllers
     [ApiController]
     public class TripController : ControllerBase
     {
+        private readonly IConfiguration _configuration;
+        private readonly DocumentClient _client;
+        private const string _dbName = "JourneyNotesDB";
+        private const string _collectionNamePerson = "Person";
+        private const string _collectionNameTrip = "Trip";
+        private const string _collectionNamePitstop = "Pitstop";
+
+        public TripController(IConfiguration configuration)
+        {
+            _configuration = configuration;
+
+            var endpointUri =
+            _configuration["ConnectionStrings:CosmosDbConnection:EndpointUri"];
+
+            var key =
+            _configuration["ConnectionStrings:CosmosDbConnection:PrimaryKey"];
+
+            _client = new DocumentClient(new Uri(endpointUri), key);
+        }
+        
         // GET: api/Trip
         [HttpGet]
-        public IEnumerable<string> GetTrips()
+        public ActionResult<IEnumerable<string>> GetTrips(string personID)
         {
-            return new string[] { "value1", "value2" };
+            // Remember to check the safety of this method!
+
+            FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
+            IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
+            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
+            $"SELECT * FROM C WHERE C.PersonId = {personID}", queryOptions);
+            var tripList = query.ToList();
+
+            return Ok(tripList);
         }
 
         // GET: api/Trip/5
@@ -27,12 +59,14 @@ namespace JourneyNotesAPI.Controllers
             return "value";
         }
 
-        // POST: api/Trip
+        // POST: api/trip
         [HttpPost]
-        public void PostTrip([FromBody] string value)
+        public async Task<ActionResult<string>> PostAsync([FromBody] Trip trip)
         {
+            Document document = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip), trip);
+            return Ok(document.Id);
         }
-
+        
         // PUT: api/Trip/5
         [HttpPut("{id}")]
         public void PutTrip(int id, [FromBody] string value)

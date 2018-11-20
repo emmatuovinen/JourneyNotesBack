@@ -2,9 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using JourneyEntities;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.Documents;
+using Microsoft.Azure.Documents.Client;
+using Microsoft.Extensions.Configuration;
 
 namespace JourneyNotesAPI.Controllers
 {
@@ -13,6 +17,26 @@ namespace JourneyNotesAPI.Controllers
     [ApiController]
     public class PersonController : ControllerBase
     {
+        private readonly IConfiguration _configuration;
+        private readonly DocumentClient _client;
+        private const string _dbName = "JourneyNotesDB";
+        private const string _collectionNamePerson = "Person";
+        private const string _collectionNameTrip = "Trip";
+        private const string _collectionNamePitstop = "Pitstop";
+
+        public PersonController(IConfiguration configuration)
+        {
+            _configuration = configuration;
+
+            var endpointUri =
+            _configuration["ConnectionStrings:CosmosDbConnection:EndpointUri"];
+
+            var key =
+            _configuration["ConnectionStrings:CosmosDbConnection:PrimaryKey"];
+
+            _client = new DocumentClient(new Uri(endpointUri), key);
+        }
+
         // GET: api/Person
         [HttpGet]
         public IEnumerable<string> GetPersons()
@@ -27,10 +51,12 @@ namespace JourneyNotesAPI.Controllers
             return "value";
         }
 
-        // POST: api/Person
+        // POST: api/person
         [HttpPost]
-        public void PostPerson([FromBody] string value)
+        public async Task<ActionResult<string>> PostAsync([FromBody] Person person)
         {
+            Document document = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePerson), person);
+            return Ok(document.Id);
         }
 
         // PUT: api/Person/5
