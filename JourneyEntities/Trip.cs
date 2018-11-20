@@ -6,7 +6,7 @@ namespace JourneyEntities
 {
     public class Trip
     {
-        public int Id { get; set; }
+        public int TripId { get; set; }
 
         public int PersonId { get; set; }
 
@@ -21,7 +21,5 @@ namespace JourneyEntities
         public string MainPhotoUrl { get; set; }
 
         public string MainPhotoSmallUrl { get; set; }
-
-
     }
 }
