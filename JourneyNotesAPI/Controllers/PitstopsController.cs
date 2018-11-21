@@ -77,7 +77,12 @@ namespace JourneyNotesAPI.Controllers
             IQueryable<Pitstop> query = _client.CreateDocumentQuery<Pitstop>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop),
             $"SELECT * FROM C WHERE C.TripId = {id}", queryOptions);
-            var pitstopCount = query.ToList().Max(a => a.PitstopId);
+            var pitstopCount = query.ToList().Count;
+
+            if (pitstopCount == 0)
+                pitstopCount = 0;
+            else
+                pitstopCount = query.ToList().Max(a => a.PitstopId);
 
             pitstop.PitstopId = pitstopCount + 1;
             pitstop.Title = newPitstop.Title;
