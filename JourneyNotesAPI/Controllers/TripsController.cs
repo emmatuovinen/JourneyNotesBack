@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json.Linq;
 
 namespace JourneyNotesAPI.Controllers
 {
@@ -117,8 +118,26 @@ namespace JourneyNotesAPI.Controllers
             trip.EndDate = newTrip.EndDate;
             trip.MainPhotoUrl = string.Empty;  // this needs to be updated! And the picture will be deleted at some point - we will not store huge pics.
             trip.MainPhotoSmallUrl = string.Empty;
-            
+
             Document document = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip), trip);
+
+            string documentId = document.Id;
+            trip.DocumentId = document.Id;
+            
+            //Document doc = _client.CreateDocumentQuery(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip))
+            //           .Where(r => r.Id == DbId)
+            //           .ToList()
+            //           .SingleOrDefault();
+            //var blaa = doc.SelfLink;
+
+            var documentUri = UriFactory.CreateDocumentUri(_dbName, _collectionNameTrip, documentId);
+            Trip updateTrip = await _client.ReadDocumentAsync<Trip>(documentUri);
+            updateTrip.DocumentId= documentId;
+            dynamic json = JObject.FromObject(updateTrip);
+
+
+            await _client.ReplaceDocumentAsync(document.SelfLink, json);
+
             return Ok(document.Id);
         }
 
@@ -139,14 +158,49 @@ namespace JourneyNotesAPI.Controllers
             trip.MainPhotoUrl = string.Empty;  // this needs to be updated! And the picture will be deleted at some point - we will not store huge pics.
             trip.MainPhotoSmallUrl = string.Empty;
 
-            Document document = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip), trip);
+            Document document = await _client.ReplaceDocumentAsync(UriFactory.CreateDocumentUri(_dbName, _collectionNameTrip, trip.DocumentId), trip);
+
             return Ok(document.Id);
         }
 
-        // DELETE: api/ApiWithActions/5
+        // DELETE: api/trip/5
         [HttpDelete("{id}")]
-        public void DeleteTrip(int id)
+        public async Task<ActionResult<string>> DeleteTrip(int id)
         {
+            //FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
+            //IQueryable<Document> query = _client.CreateDocumentQuery<Document>(
+            //UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
+            //$"SELECT * FROM C WHERE C.TripId = '{id}'", queryOptions);
+            //Document tripdoc = query.ToList().FirstOrDefault();            
+
+            //string DbId = tripdoc.Id;
+
+            FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
+            IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
+            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
+            $"SELECT * FROM C WHERE C.TripId = {id}", queryOptions);
+            var trip = query.ToList().FirstOrDefault();
+
+            string DbId = trip.DocumentId;
+
+            try
+            {
+                await _client.DeleteDocumentAsync(
+                 UriFactory.CreateDocumentUri(_dbName, _collectionNameTrip, DbId));
+                return Ok($"Deleted trip {id}");
+            }
+            catch (DocumentClientException de)
+            {
+                switch (de.StatusCode.Value)
+                {
+                    case System.Net.HttpStatusCode.NotFound:
+                        return NotFound();
+                }
+            }
+            return BadRequest();
         }
+
+
     }
 }
+

@@ -23,6 +23,8 @@ namespace JourneyEntities
         public string MainPhotoSmallUrl { get; set; }
 
         public List<Pitstop> Pitstops { get; set; }
+
+        public string Id { get; set; }
     }
 
     public class NewTrip
