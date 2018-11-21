@@ -130,8 +130,6 @@ namespace JourneyNotesAPI.Controllers
             //           .SingleOrDefault();
             //var blaa = doc.SelfLink;
 
-
-
             return Ok(document.Id);
         }
 
@@ -200,8 +198,6 @@ namespace JourneyNotesAPI.Controllers
             }
             return BadRequest();
         }
-
-
     }
 }
 

@@ -36,17 +36,17 @@ namespace JourneyNotesAPI.Controllers
 
             _client = new DocumentClient(new Uri(endpointUri), key);
 
-            // We have everything in Azure so no need for this:
-            //_client.CreateDatabaseIfNotExistsAsync(new Database
-            //{
-            //    Id = _dbName
-            //}).Wait();
-
-            //_client.CreateDocumentCollectionIfNotExistsAsync(
-            //UriFactory.CreateDatabaseUri(_dbName),
-            //new DocumentCollection { Id = _collectionNameTrip });
         }
 
+        // We have everything in Azure so no need for this:
+        //_client.CreateDatabaseIfNotExistsAsync(new Database
+        //{
+        //    Id = _dbName
+        //}).Wait();
+
+        //_client.CreateDocumentCollectionIfNotExistsAsync(
+        //UriFactory.CreateDatabaseUri(_dbName),
+        //new DocumentCollection { Id = _collectionNameTrip });
 
         // GET: api/Pitstop
         // No need for this, since you get them from api/trips/5.
@@ -57,12 +57,18 @@ namespace JourneyNotesAPI.Controllers
         //}
 
         // GET: api/pitstops/5
-        [HttpGet("{id}", Name = "GetPitstop")]
-        public string GetPitstop(int id)
-        {
-            // We might need this
-            return "value";
-        }
+        // No need for this, since you get them from api/trips/5.
+        //[HttpGet("{id}", Name = "GetPitstop")]
+        //public ActionResult<Pitstop> GetPitstop(int id)
+        //{
+        //    FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
+        //    IQueryable<Pitstop> query = _client.CreateDocumentQuery<Pitstop>(
+        //    UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
+        //    $"SELECT * FROM C WHERE C.PitstopId = {id}", queryOptions);
+        //    Pitstop pitstopDetails = query.ToList().FirstOrDefault();
+
+        //    return Ok(pitstopDetails);
+        //}
 
         // POST/Pitstop
         [HttpPost]
@@ -101,10 +107,38 @@ namespace JourneyNotesAPI.Controllers
             return Ok(document.Id);
         }
 
-        // PUT: api/Person/5
+        // PUT: api/pitstops/5
         [HttpPut("{id}")]
-        public void PutPitstop(int id, [FromBody] string value)
+        public async Task<ActionResult<string>> PutPitstop(int id, [FromBody] Pitstop updatedPitstop)
         {
+            FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
+            IQueryable<Pitstop> query = _client.CreateDocumentQuery<Pitstop>(
+            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
+            $"SELECT * FROM C WHERE C.PitstopId = {id}", queryOptions);
+            Pitstop pitstop = query.ToList().FirstOrDefault();
+
+            pitstop.Title = updatedPitstop.Title;
+            pitstop.Note = updatedPitstop.Note;
+            pitstop.PitstopDate = updatedPitstop.PitstopDate;
+            pitstop.PhotoOriginalUrl = string.Empty; // Remember to update
+            pitstop.PhotoLargeUrl = string.Empty;
+            pitstop.PhotoMediumUrl = string.Empty;
+            pitstop.PhotoSmallUrl = string.Empty; // will be updated when the queue has done it's job.
+            pitstop.TripId = updatedPitstop.TripId;
+            pitstop.Latitude = updatedPitstop.Latitude;
+            pitstop.Longitude = updatedPitstop.Longitude;
+            pitstop.Address = updatedPitstop.Address;
+
+            string documentId = pitstop.id;
+
+            var documentUri = UriFactory.CreateDocumentUri(_dbName, _collectionNamePitstop, documentId);
+
+            Document document = await _client.ReadDocumentAsync(documentUri);
+            
+            await _client.ReplaceDocumentAsync(document.SelfLink, pitstop);
+
+            return Ok(pitstop.id);
+            //return Ok(document.Id);
         }
 
         // DELETE: api/ApiWithActions/5

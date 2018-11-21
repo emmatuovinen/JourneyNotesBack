@@ -6,6 +6,8 @@ namespace JourneyEntities
 {
     public class Pitstop
     {
+        public string id { get; set; }
+
         public int PitstopId { get; set; }
 
         public string Title { get; set; }
