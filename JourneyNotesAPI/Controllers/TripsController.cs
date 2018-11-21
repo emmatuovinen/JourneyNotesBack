@@ -156,7 +156,6 @@ namespace JourneyNotesAPI.Controllers
             trip.EndDate = editedTrip.EndDate;
             trip.MainPhotoUrl = string.Empty;  // this needs to be updated! And the picture will be deleted at some point - we will not store huge pics.
             trip.MainPhotoSmallUrl = string.Empty;
-
            
             await _client.ReplaceDocumentAsync(document.SelfLink, trip);
 

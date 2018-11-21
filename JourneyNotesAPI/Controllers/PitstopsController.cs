@@ -113,7 +113,7 @@ namespace JourneyNotesAPI.Controllers
         {
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Pitstop> query = _client.CreateDocumentQuery<Pitstop>(
-            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
+            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop),
             $"SELECT * FROM C WHERE C.PitstopId = {id}", queryOptions);
             Pitstop pitstop = query.ToList().FirstOrDefault();
 
@@ -137,8 +137,7 @@ namespace JourneyNotesAPI.Controllers
             
             await _client.ReplaceDocumentAsync(document.SelfLink, pitstop);
 
-            return Ok(pitstop.id);
-            //return Ok(document.Id);
+            return Ok(document.Id);
         }
 
         // DELETE: api/ApiWithActions/5
