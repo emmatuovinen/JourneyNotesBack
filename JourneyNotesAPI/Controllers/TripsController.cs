@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using JourneyEntities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -40,7 +41,7 @@ namespace JourneyNotesAPI.Controllers
 
         // GET: api/Trips
         // All trips of one person
-        [HttpGet]
+        [HttpGet, Authorize]
         public ActionResult<IEnumerable<string>> GetTrips(string personID)
         {
             // Remember to check the safety of this method!
