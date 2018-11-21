@@ -166,26 +166,20 @@ namespace JourneyNotesAPI.Controllers
         [HttpDelete("{id}")]
         public async Task<ActionResult<string>> DeleteTrip(int id)
         {
-            //FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
-            //IQueryable<Document> query = _client.CreateDocumentQuery<Document>(
-            //UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
-            //$"SELECT * FROM C WHERE C.TripId = '{id}'", queryOptions);
-            //Document tripdoc = query.ToList().FirstOrDefault();            
-
-            //string DbId = tripdoc.Id;
+            //var person = HttpContext.User;
+            var userID = 70;
 
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
-            $"SELECT * FROM C WHERE C.TripId = {id}", queryOptions);
+            $"SELECT * FROM T WHERE T.TripId = {id} AND T.PersonId = {userID}", queryOptions);
             var trip = query.ToList().FirstOrDefault();
 
             string DbId = trip.id;
 
             try
             {
-                await _client.DeleteDocumentAsync(
-                 UriFactory.CreateDocumentUri(_dbName, _collectionNameTrip, DbId));
+                await _client.DeleteDocumentAsync(UriFactory.CreateDocumentUri(_dbName, _collectionNameTrip, DbId));
                 return Ok($"Deleted trip {id}");
             }
             catch (DocumentClientException de)

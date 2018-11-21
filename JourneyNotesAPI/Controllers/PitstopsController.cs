@@ -141,9 +141,32 @@ namespace JourneyNotesAPI.Controllers
         }
 
         // DELETE: api/ApiWithActions/5
-        [HttpDelete("{id}")]
-        public void DeletePitstop(int id)
+        [HttpDelete("{TripId}", Name = "TripId")]
+        public async Task<ActionResult<string>> DeletePitstop(int PitstopId, int TripId)
         {
+            FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
+            IQueryable<Pitstop> query = _client.CreateDocumentQuery<Pitstop>(
+            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop),
+            $"SELECT * FROM C WHERE C.PitstopId = {PitstopId}", queryOptions);
+            var pitstop = query.ToList().FirstOrDefault();
+
+            string DbId = pitstop.id;
+
+            try
+            {
+                await _client.DeleteDocumentAsync(
+                 UriFactory.CreateDocumentUri(_dbName, _collectionNamePitstop, DbId));
+                return Ok($"Deleted pitstop {PitstopId}");
+            }
+            catch (DocumentClientException de)
+            {
+                switch (de.StatusCode.Value)
+                {
+                    case System.Net.HttpStatusCode.NotFound:
+                        return NotFound();
+                }
+            }
+            return BadRequest();
         }
     }
 }

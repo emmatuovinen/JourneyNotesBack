@@ -57,9 +57,9 @@ namespace JourneyNotesAPI.Controllers
             return Ok(person);
         }
 
-        // POST: api/person
+        // POST: api/people
         [HttpPost]
-        public async Task<ActionResult<string>> PostAsync([FromBody] Person person)
+        public async Task<ActionResult<string>> PostPerson([FromBody] Person person)
         {
             Document document = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePerson), person);
             return Ok(document.Id);
