@@ -24,7 +24,7 @@ namespace JourneyEntities
 
         public List<Pitstop> Pitstops { get; set; }
 
-        public string Id { get; set; }
+        public string id { get; set; }
     }
 
     public class NewTrip

@@ -118,11 +118,11 @@ namespace JourneyNotesAPI.Controllers
             trip.EndDate = newTrip.EndDate;
             trip.MainPhotoUrl = string.Empty;  // this needs to be updated! And the picture will be deleted at some point - we will not store huge pics.
             trip.MainPhotoSmallUrl = string.Empty;
-
+            
             Document document = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip), trip);
 
-            string documentId = document.Id;
-            trip.DocumentId = document.Id;
+            //string documentId = document.Id;
+            //trip.id = document.Id;
             
             //Document doc = _client.CreateDocumentQuery(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip))
             //           .Where(r => r.Id == DbId)
@@ -130,13 +130,7 @@ namespace JourneyNotesAPI.Controllers
             //           .SingleOrDefault();
             //var blaa = doc.SelfLink;
 
-            var documentUri = UriFactory.CreateDocumentUri(_dbName, _collectionNameTrip, documentId);
-            Trip updateTrip = await _client.ReadDocumentAsync<Trip>(documentUri);
-            updateTrip.DocumentId= documentId;
-            dynamic json = JObject.FromObject(updateTrip);
 
-
-            await _client.ReplaceDocumentAsync(document.SelfLink, json);
 
             return Ok(document.Id);
         }
@@ -151,6 +145,12 @@ namespace JourneyNotesAPI.Controllers
             $"SELECT * FROM C WHERE C.TripId = {id}", queryOptions);
             Trip trip = query.ToList().FirstOrDefault();
 
+            string documentId = trip.id;
+
+            var documentUri = UriFactory.CreateDocumentUri(_dbName, _collectionNameTrip, documentId);
+
+            Document document = await _client.ReadDocumentAsync(documentUri);
+
             trip.Headline = editedTrip.Headline;
             trip.Description = editedTrip.Description;
             trip.StartDate = editedTrip.StartDate;
@@ -158,7 +158,8 @@ namespace JourneyNotesAPI.Controllers
             trip.MainPhotoUrl = string.Empty;  // this needs to be updated! And the picture will be deleted at some point - we will not store huge pics.
             trip.MainPhotoSmallUrl = string.Empty;
 
-            Document document = await _client.ReplaceDocumentAsync(UriFactory.CreateDocumentUri(_dbName, _collectionNameTrip, trip.DocumentId), trip);
+           
+            await _client.ReplaceDocumentAsync(document.SelfLink, trip);
 
             return Ok(document.Id);
         }
@@ -181,7 +182,7 @@ namespace JourneyNotesAPI.Controllers
             $"SELECT * FROM C WHERE C.TripId = {id}", queryOptions);
             var trip = query.ToList().FirstOrDefault();
 
-            string DbId = trip.DocumentId;
+            string DbId = trip.id;
 
             try
             {
