@@ -38,17 +38,23 @@ namespace JourneyNotesAPI.Controllers
         }
 
         // GET: api/Person
-        [HttpGet]
-        public IEnumerable<string> GetPersons()
-        {
-            return new string[] { "valueX", "valueY" };
-        }
+        //[HttpGet]
+        //public IEnumerable<string> GetPersons()
+        //{
+        //    return new string[] { "valueX", "valueY" };
+        //}
 
-        // GET: api/Person/5
+        // GET: api/people/5
         [HttpGet("{id}", Name = "GetPerson")]
-        public string GetPerson(int id)
+        public ActionResult<string> GetPerson(int id)
         {
-            return "value";
+            FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
+            IQueryable<Person> query = _client.CreateDocumentQuery<Person>(
+            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePerson),
+            $"SELECT * FROM C WHERE C.PersonId = {id}", queryOptions);
+            var person = query.ToList().FirstOrDefault();
+
+            return Ok(person);
         }
 
         // POST: api/person

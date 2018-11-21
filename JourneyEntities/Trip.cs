@@ -35,4 +35,19 @@ namespace JourneyEntities
 
         public DateTime EndDate { get; set; }
     }
+
+    public class EditedTrip
+    {
+        public string Headline { get; set; }
+
+        public string Description { get; set; }
+
+        public DateTime StartDate { get; set; }
+
+        public DateTime EndDate { get; set; }
+
+        public string MainPhotoUrl { get; set; }
+
+        public string MainPhotoSmallUrl { get; set; }
+    }
 }

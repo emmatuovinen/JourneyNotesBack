@@ -49,16 +49,18 @@ namespace JourneyNotesAPI.Controllers
 
 
         // GET: api/Pitstop
-        [HttpGet]
-        public IEnumerable<string> GetPitstops()
-        {
-            return new string[] { "value1", "value2" };
-        }
+        // No need for this, since you get them from api/trips/5.
+        //[HttpGet]
+        //public IEnumerable<string> GetPitstops()
+        //{
+        //    return new string[] { "value1", "value2" };
+        //}
 
-        // GET: api/Person/5
+        // GET: api/pitstops/5
         [HttpGet("{id}", Name = "GetPitstop")]
         public string GetPitstop(int id)
         {
+            // We might need this
             return "value";
         }
 

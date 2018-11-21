@@ -90,7 +90,7 @@ namespace JourneyNotesAPI.Controllers
 
         // POST: api/trips
         [HttpPost]
-        public async Task<ActionResult<string>> PostAsync([FromBody] NewTrip newTrip)
+        public async Task<ActionResult<string>> PostNewTrip([FromBody] NewTrip newTrip)
         {
             Trip trip = new Trip();
 
@@ -102,7 +102,12 @@ namespace JourneyNotesAPI.Controllers
             IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
             $"SELECT * FROM C WHERE C.PersonId = {person}", queryOptions);
-            var tripCount = query.ToList().Max(a => a.TripId);
+            var tripCount = query.ToList().Count;
+
+            if (tripCount == 0)
+                tripCount = 0;
+            else
+                tripCount = query.ToList().Max(a => a.TripId);
 
             trip.TripId = tripCount + 1;
             trip.PersonId = person;
@@ -119,8 +124,23 @@ namespace JourneyNotesAPI.Controllers
 
         // PUT: api/Trip/5
         [HttpPut("{id}")]
-        public void PutTrip(int id, [FromBody] string value)
+        public async Task<ActionResult<string>> PutTrip(int id, [FromBody] EditedTrip editedTrip)
         {
+            FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
+            IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
+            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
+            $"SELECT * FROM C WHERE C.TripId = {id}", queryOptions);
+            Trip trip = query.ToList().FirstOrDefault();
+
+            trip.Headline = editedTrip.Headline;
+            trip.Description = editedTrip.Description;
+            trip.StartDate = editedTrip.StartDate;
+            trip.EndDate = editedTrip.EndDate;
+            trip.MainPhotoUrl = string.Empty;  // this needs to be updated! And the picture will be deleted at some point - we will not store huge pics.
+            trip.MainPhotoSmallUrl = string.Empty;
+
+            Document document = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip), trip);
+            return Ok(document.Id);
         }
 
         // DELETE: api/ApiWithActions/5
