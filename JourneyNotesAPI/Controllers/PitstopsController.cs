@@ -13,7 +13,7 @@ using Microsoft.Extensions.Configuration;
 namespace JourneyNotesAPI.Controllers
 {
     [EnableCors("MyPolicy")]
-    [Route("api/[controller]/[Action]")]
+    [Route("api/[controller]")]
     [ApiController]
     public class PitstopsController : ControllerBase
     {
@@ -73,6 +73,11 @@ namespace JourneyNotesAPI.Controllers
         //    return Ok(pitstopDetails);
         //}
 
+        /// <summary>
+        /// Adds a new Pitstop under the user and the chosen Trip
+        /// </summary>
+        /// <param name="newPitstop"></param>
+        /// <returns></returns>
         // POST/Pitstop
         [HttpPost]
         public async Task<ActionResult<string>> PostPitstop([FromBody] NewPitstop newPitstop)
@@ -122,13 +127,19 @@ namespace JourneyNotesAPI.Controllers
 
             //var documentUri = UriFactory.CreateDocumentUri(_dbName, _collectionNameTrip, documentId);
             //Document documentTrip = await _client.ReadDocumentAsync(documentUri);
-            
+
             //await _client.ReplaceDocumentAsync(documentTrip.SelfLink, updateTrip);
 
             Document documentPitstop = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop), pitstop);
             return Ok(documentPitstop.Id);
         }
 
+        /// <summary>
+        /// Updates a certain pitstop by PitstopId
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="updatedPitstop"></param>
+        /// <returns></returns>
         // PUT: api/pitstops/5
         [HttpPut("{id}")]
         public async Task<ActionResult<string>> PutPitstop(int id, [FromBody] NewPitstop updatedPitstop)
@@ -154,15 +165,22 @@ namespace JourneyNotesAPI.Controllers
             var documentUri = UriFactory.CreateDocumentUri(_dbName, _collectionNamePitstop, documentId);
 
             Document document = await _client.ReadDocumentAsync(documentUri);
-            
+
             await _client.ReplaceDocumentAsync(document.SelfLink, pitstop);
 
             return Ok(document.Id);
         }
 
+        /// <summary>
+        /// Deletes a certain Pitstop by PitstopId
+        /// </summary>
+        /// <param name="PitstopId"></param>
+        /// <param name="TripId"></param>
+        /// <returns></returns>
         // DELETE: api/ApiWithActions/5
-        [HttpDelete("{TripId}", Name = "TripId")]
-        public async Task<ActionResult<string>> DeletePitstop(int PitstopId, int TripId)
+        //[HttpDelete("{TripId}", Name = "TripId")]
+        [HttpDelete("{TripId}/{PitstopId}")]
+        public async Task<ActionResult<string>> DeletePitstop([FromRoute] int TripId, [FromRoute] int PitstopId)
         {
             //var person = HttpContext.User;
             var person = kovakoodattuKayttaja;
@@ -170,7 +188,8 @@ namespace JourneyNotesAPI.Controllers
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Pitstop> query = _client.CreateDocumentQuery<Pitstop>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop),
-            $"SELECT * FROM C WHERE C.PitstopId = {PitstopId} AND C.PersonId = {person}", queryOptions);
+            //$"SELECT * FROM C WHERE C.PitstopId = {PitstopId} AND C.PersonId = {person}", queryOptions);
+            $"SELECT * FROM C where C.TripId = {TripId} AND C.PersonId = {person} AND C.PitstopId = {PitstopId}", queryOptions);
             var pitstop = query.ToList().FirstOrDefault();
 
             string DbId = pitstop.id;

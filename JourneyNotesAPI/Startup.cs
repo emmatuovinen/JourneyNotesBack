@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -44,7 +45,12 @@ namespace JourneyNotesAPI
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new Info { Title = "JourneyNotes API", Version = "v1" });
+
+                // XML Documentation:
+                var xmlPath = Path.Combine(AppContext.BaseDirectory, "JourneyNotesAPI.xml");
+                c.IncludeXmlComments(xmlPath);
             });
+
 
             //Auth0 configuration
             services.AddAuthentication(options =>

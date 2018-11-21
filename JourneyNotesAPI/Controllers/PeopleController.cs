@@ -44,6 +44,11 @@ namespace JourneyNotesAPI.Controllers
         //    return new string[] { "valueX", "valueY" };
         //}
 
+        /// <summary>
+        /// Gets the customer details by CustomerID
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         // GET: api/people/5
         [HttpGet("{id}", Name = "GetPerson")]
         public ActionResult<string> GetPerson(int id)
@@ -57,6 +62,11 @@ namespace JourneyNotesAPI.Controllers
             return Ok(person);
         }
 
+        /// <summary>
+        /// Adds a new person to the database
+        /// </summary>
+        /// <param name="person"></param>
+        /// <returns></returns>
         // POST: api/people
         [HttpPost]
         public async Task<ActionResult<string>> PostPerson([FromBody] Person person)
