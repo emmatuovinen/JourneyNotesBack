@@ -66,15 +66,15 @@ namespace JourneyNotesAPI.Controllers
         }
 
         // PUT: api/Person/5
-        [HttpPut("{id}")]
-        public void PutPerson(int id, [FromBody] string value)
-        {
-        }
+        //[HttpPut("{id}")]
+        //public void PutPerson(int id, [FromBody] string value)
+        //{
+        //}
 
         // DELETE: api/ApiWithActions/5
-        [HttpDelete("{id}")]
-        public void DeletePerson(int id)
-        {
-        }
+        //[HttpDelete("{id}")]
+        //public void DeletePerson(int id)
+        //{
+        //}
     }
 }

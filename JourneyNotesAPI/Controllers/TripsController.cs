@@ -19,6 +19,9 @@ namespace JourneyNotesAPI.Controllers
     [ApiController]
     public class TripsController : ControllerBase
     {
+        // HUOM! MUISTA POISTAA TÄMÄ KOVAKOODATTU KÄYTTÄJÄ!!
+        int kovakoodattuKayttaja = 70;
+
         private readonly IConfiguration _configuration;
         private readonly DocumentClient _client;
         private const string _dbName = "JourneyNotesDB";
@@ -41,15 +44,15 @@ namespace JourneyNotesAPI.Controllers
 
         // GET: api/Trips
         // All trips of one person
-        [HttpGet, Authorize]
-        public ActionResult<IEnumerable<string>> GetTrips(string personID)
+        [HttpGet]
+        public ActionResult<IEnumerable<string>> GetTrips(string userID)
         {
             // Remember to check the safety of this method!
 
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
-            $"SELECT * FROM C WHERE C.PersonId = {personID}", queryOptions);
+            $"SELECT * FROM C WHERE C.PersonId = {userID}", queryOptions);
             var tripList = query.ToList();
 
             return Ok(tripList);
@@ -74,15 +77,18 @@ namespace JourneyNotesAPI.Controllers
         [HttpGet("{Id}", Name = "GetTripAndPitstops")]
         public ActionResult<string> GetTripAndPitstops(int Id)
         {
+            //var person = HttpContext.User;
+            var person = kovakoodattuKayttaja;
+
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
-            $"SELECT * FROM C WHERE C.TripId = {Id}", queryOptions);
+            $"SELECT * FROM T WHERE T.TripId = {Id} AND T.PersonId = {person}", queryOptions);
             Trip tripDetails = query.ToList().FirstOrDefault();
 
             IQueryable<Pitstop> query2 = _client.CreateDocumentQuery<Pitstop>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop),
-            $"SELECT * FROM C WHERE C.TripId = {Id}", queryOptions);
+            $"SELECT * FROM C WHERE C.TripId = {Id} AND C.PersonId = {person}", queryOptions);
             var pitstops = query2.ToList();
 
             tripDetails.Pitstops = pitstops;
@@ -97,7 +103,7 @@ namespace JourneyNotesAPI.Controllers
             Trip trip = new Trip();
 
             //var person = HttpContext.User;
-            var person = 70;
+            var person = kovakoodattuKayttaja;
 
             // Determining the tripId number
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
@@ -121,16 +127,7 @@ namespace JourneyNotesAPI.Controllers
             trip.MainPhotoSmallUrl = string.Empty;
             
             Document document = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip), trip);
-
-            //string documentId = document.Id;
-            //trip.id = document.Id;
             
-            //Document doc = _client.CreateDocumentQuery(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip))
-            //           .Where(r => r.Id == DbId)
-            //           .ToList()
-            //           .SingleOrDefault();
-            //var blaa = doc.SelfLink;
-
             return Ok(document.Id);
         }
 
@@ -138,11 +135,14 @@ namespace JourneyNotesAPI.Controllers
         [HttpPut("{id}")]
         public async Task<ActionResult<string>> PutTrip(int id, [FromBody] EditedTrip editedTrip)
         {
+            //var person = HttpContext.User;
+            var person = kovakoodattuKayttaja;
+
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
-            $"SELECT * FROM C WHERE C.TripId = {id}", queryOptions);
-            Trip trip = query.ToList().FirstOrDefault();
+            $"SELECT * FROM C WHERE C.TripId = {id} AND C.PersonId = {person}", queryOptions);
+            var trip = query.ToList().FirstOrDefault();
 
             string documentId = trip.id;
 
@@ -156,7 +156,7 @@ namespace JourneyNotesAPI.Controllers
             trip.EndDate = editedTrip.EndDate;
             trip.MainPhotoUrl = string.Empty;  // this needs to be updated! And the picture will be deleted at some point - we will not store huge pics.
             trip.MainPhotoSmallUrl = string.Empty;
-           
+
             await _client.ReplaceDocumentAsync(document.SelfLink, trip);
 
             return Ok(document.Id);
@@ -167,7 +167,7 @@ namespace JourneyNotesAPI.Controllers
         public async Task<ActionResult<string>> DeleteTrip(int id)
         {
             //var person = HttpContext.User;
-            var userID = 70;
+            var userID = kovakoodattuKayttaja;
 
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
