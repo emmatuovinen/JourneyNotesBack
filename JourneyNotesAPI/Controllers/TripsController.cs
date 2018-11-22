@@ -60,7 +60,7 @@ namespace JourneyNotesAPI.Controllers
             // Queue
             var accountName = _configuration["ConnectionStrings:StorageConnection:AccountName"];
             var accountKey = _configuration["ConnectionStrings:StorageConnection:AccountKey"];
-            _storageAccount = new CloudStorageAccount(new StorageCredentials(accountName, accountKey), true);            
+            _storageAccount = new CloudStorageAccount(new StorageCredentials(accountName, accountKey), true);
         }
 
         /// <summary>
@@ -144,7 +144,7 @@ namespace JourneyNotesAPI.Controllers
             }
 
             Trip trip = new Trip();
-            
+
             //string photoName = await StorePicture(picture);
 
             // Determining the tripId number
@@ -158,7 +158,7 @@ namespace JourneyNotesAPI.Controllers
                 tripCount = 0;
             else
                 tripCount = query.ToList().Max(a => a.TripId);
-
+            
             trip.TripId = tripCount + 1;
             trip.PersonId = person;
             trip.Headline = newTrip.Headline;
@@ -166,13 +166,12 @@ namespace JourneyNotesAPI.Controllers
             trip.StartDate = newTrip.StartDate;
             trip.EndDate = newTrip.EndDate;
 
-
             trip.MainPhotoUrl = string.Empty;  // this needs to be updated! And the picture will be deleted at some point - we will not store huge pics.
             trip.MainPhotoSmallUrl = string.Empty;
-            
+
             Document document = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip), trip);
-			//await AddQueueItem(new QueueParam { Id = document.Id, PictureUri = "photoName" });
-            
+            //await AddQueueItem(new QueueParam { Id = document.Id, PictureUri = "photoName" });
+
             return Ok(document.Id);
         }
 
@@ -196,7 +195,7 @@ namespace JourneyNotesAPI.Controllers
             var trip = query.ToList().FirstOrDefault();
 
             string documentId = trip.id;
-            
+
             var documentUri = UriFactory.CreateDocumentUri(_dbName, _collectionNameTrip, documentId);
 
             Document document = await _client.ReadDocumentAsync(documentUri);
