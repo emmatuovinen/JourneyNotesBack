@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using JourneyEntities;
 using Microsoft.AspNetCore.Authorization;
@@ -48,11 +49,14 @@ namespace JourneyNotesAPI.Controllers
         /// <param name="userID"></param>
         /// <returns></returns>
         // GET: api/Trips
-        [HttpGet]
+        [HttpGet, Authorize]
         public ActionResult<IEnumerable<string>> GetTrips(string userID)
         {
+          
             // Remember to check the safety of this method!
 
+            string userId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+    
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
