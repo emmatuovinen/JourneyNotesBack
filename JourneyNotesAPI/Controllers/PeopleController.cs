@@ -13,7 +13,7 @@ using Microsoft.Extensions.Configuration;
 namespace JourneyNotesAPI.Controllers
 {
     [EnableCors("MyPolicy")]
-    [Route("api/[controller]/[Action]")]
+    [Route("api/[controller]")]
     [ApiController]
     public class PeopleController : ControllerBase
     {

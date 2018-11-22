@@ -42,8 +42,12 @@ namespace JourneyNotesAPI.Controllers
             _client = new DocumentClient(new Uri(endpointUri), key);
         }
 
+        /// <summary>
+        /// Gets all the trips of the user by user id
+        /// </summary>
+        /// <param name="userID"></param>
+        /// <returns></returns>
         // GET: api/Trips
-        // All trips of one person
         [HttpGet]
         public ActionResult<IEnumerable<string>> GetTrips(string userID)
         {
@@ -72,8 +76,12 @@ namespace JourneyNotesAPI.Controllers
         //    return Ok(tripDetails);
         //}
 
+        /// <summary>
+        /// Gets the trip and the pitstops under it by trip id
+        /// </summary>
+        /// <param name="Id"></param>
+        /// <returns></returns>
         // GET api/Trips/5
-        // One trip by TripId + the pitstops under it
         [HttpGet("{Id}", Name = "GetTripAndPitstops")]
         public ActionResult<string> GetTripAndPitstops(int Id)
         {
@@ -96,6 +104,11 @@ namespace JourneyNotesAPI.Controllers
             return Ok(tripDetails);
         }
 
+        /// <summary>
+        /// Posts a new trip for a user
+        /// </summary>
+        /// <param name="newTrip"></param>
+        /// <returns></returns>
         // POST: api/trips
         [HttpPost]
         public async Task<ActionResult<string>> PostNewTrip([FromBody] NewTrip newTrip)
@@ -131,6 +144,12 @@ namespace JourneyNotesAPI.Controllers
             return Ok(document.Id);
         }
 
+        /// <summary>
+        /// Edits a trip by trip id
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="editedTrip"></param>
+        /// <returns></returns>
         // PUT: api/Trip/5
         [HttpPut("{id}")]
         public async Task<ActionResult<string>> PutTrip(int id, [FromBody] EditedTrip editedTrip)
@@ -162,6 +181,11 @@ namespace JourneyNotesAPI.Controllers
             return Ok(document.Id);
         }
 
+        /// <summary>
+        /// Deletes a trip by trip id
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         // DELETE: api/trip/5
         [HttpDelete("{id}")]
         public async Task<ActionResult<string>> DeleteTrip(int id)

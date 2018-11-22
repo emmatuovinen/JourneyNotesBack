@@ -141,8 +141,8 @@ namespace JourneyNotesAPI.Controllers
         /// <param name="updatedPitstop"></param>
         /// <returns></returns>
         // PUT: api/pitstops/5
-        [HttpPut("{id}")]
-        public async Task<ActionResult<string>> PutPitstop(int id, [FromBody] NewPitstop updatedPitstop)
+        [HttpPut("{TripId}/{PitstopId}")]
+        public async Task<ActionResult<string>> PutPitstop([FromRoute] int TripId, [FromRoute] int PitstopId, [FromBody] NewPitstop updatedPitstop)
         {
             //var person = HttpContext.User;
             var person = kovakoodattuKayttaja;
@@ -150,7 +150,7 @@ namespace JourneyNotesAPI.Controllers
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Pitstop> query = _client.CreateDocumentQuery<Pitstop>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop),
-            $"SELECT * FROM C WHERE C.PitstopId = {id} AND C.PersonId = {person}", queryOptions);
+            $"SELECT * FROM C WHERE C.PitstopId = {PitstopId} AND C.TripId = {TripId} AND C.PersonId = {person}", queryOptions);
             Pitstop pitstop = query.ToList().FirstOrDefault();
 
             pitstop.Title = updatedPitstop.Title;
