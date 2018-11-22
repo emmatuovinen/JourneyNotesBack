@@ -137,7 +137,8 @@ namespace JourneyNotesAPI.Controllers
         /// <summary>
         /// Updates a certain pitstop by PitstopId
         /// </summary>
-        /// <param name="id"></param>
+        /// <param name="TripId"></param>
+        /// <param name="PitstopId"></param>
         /// <param name="updatedPitstop"></param>
         /// <returns></returns>
         // PUT: api/pitstops/5
