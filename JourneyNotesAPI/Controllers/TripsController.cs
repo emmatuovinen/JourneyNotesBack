@@ -75,7 +75,7 @@ namespace JourneyNotesAPI.Controllers
             // Remember to check the safety of this method!
 
             var currentUser = HttpContext.User;
-            var UserName = User.Identity.Name;
+            var UserName = User.Identities;
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
