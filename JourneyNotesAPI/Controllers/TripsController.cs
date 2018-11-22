@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using JourneyEntities;
@@ -10,6 +11,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
 using Microsoft.Extensions.Configuration;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Auth;
+using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.WindowsAzure.Storage.Queue;
 using Newtonsoft.Json.Linq;
 
 namespace JourneyNotesAPI.Controllers
@@ -23,23 +28,39 @@ namespace JourneyNotesAPI.Controllers
         int kovakoodattuKayttaja = 70;
 
         private readonly IConfiguration _configuration;
+
+        // CosmosDB
         private readonly DocumentClient _client;
         private const string _dbName = "JourneyNotesDB";
         private const string _collectionNamePerson = "Person";
         private const string _collectionNameTrip = "Trip";
         private const string _collectionNamePitstop = "Pitstop";
 
+        // Queue
+        private readonly CloudStorageAccount _storageAccount;
+        private readonly CloudQueueClient _queueClient;
+        private readonly CloudQueue _messageQueue;
+        private const string _queueName = "journeynotes";
+
+        // Blob
+        private readonly CloudBlobClient _blobClient;
+        private readonly CloudBlobContainer _container;
+        private const string _containerName = "photos";
+
         public TripsController(IConfiguration configuration)
         {
             _configuration = configuration;
 
-            var endpointUri =
-            _configuration["ConnectionStrings:CosmosDbConnection:EndpointUri"];
-
-            var key =
-            _configuration["ConnectionStrings:CosmosDbConnection:PrimaryKey"];
+            // CosmosDB
+            var endpointUri = _configuration["ConnectionStrings:CosmosDbConnection:EndpointUri"];
+            var key = _configuration["ConnectionStrings:CosmosDbConnection:PrimaryKey"];
 
             _client = new DocumentClient(new Uri(endpointUri), key);
+
+            // Queue
+            var accountName = _configuration["ConnectionStrings:StorageConnection:AccountName"];
+            var accountKey = _configuration["ConnectionStrings:StorageConnection:AccountKey"];
+            _storageAccount = new CloudStorageAccount(new StorageCredentials(accountName, accountKey), true);
         }
 
         /// <summary>
@@ -101,48 +122,58 @@ namespace JourneyNotesAPI.Controllers
             $"SELECT * FROM C WHERE C.TripId = {Id} AND C.PersonId = {person}", queryOptions);
             var pitstops = query2.ToList();
 
-                tripDetails.Pitstops = pitstops;
+            tripDetails.Pitstops = pitstops;
 
-                return Ok(tripDetails);
-            }
+            return Ok(tripDetails);
+        }
 
         /// <summary>
         /// Posts a new trip for a user
         /// </summary>
         /// <param name="newTrip"></param>
+        /// <param name="picture"></param>
         /// <returns></returns>
         // POST: api/trips
-        [HttpPost]
-        public async Task<ActionResult<string>> PostNewTrip([FromBody] NewTrip newTrip)
+        [HttpPost(Name = "PostNewTrip")]
+        public async Task<ActionResult> PostNewTrip([FromBody] NewTrip newTrip/*, IFormFile picture*/)
         {
-            Trip trip = new Trip();
-
             //var person = HttpContext.User;
             var person = kovakoodattuKayttaja;
 
-                // Determining the tripId number
-                FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
-                IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
-                UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
-                $"SELECT * FROM C WHERE C.PersonId = {person}", queryOptions);
-                var tripCount = query.ToList().Count;
+            if (!ModelState.IsValid)
+            {
+                return BadRequest("Something wrong with the trip details.");
+            }
 
-                if (tripCount == 0)
-                    tripCount = 0;
-                else
-                    tripCount = query.ToList().Max(a => a.TripId);
+            Trip trip = new Trip();
 
+            //string photoName = await StorePicture(picture);
+
+            // Determining the tripId number
+            FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
+            IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
+            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
+            $"SELECT * FROM C WHERE C.PersonId = {person}", queryOptions);
+            var tripCount = query.ToList().Count;
+
+            if (tripCount == 0)
+                tripCount = 0;
+            else
+                tripCount = query.ToList().Max(a => a.TripId);
+            
             trip.TripId = tripCount + 1;
             trip.PersonId = person;
             trip.Headline = newTrip.Headline;
             trip.Description = newTrip.Description;
             trip.StartDate = newTrip.StartDate;
             trip.EndDate = newTrip.EndDate;
+
             trip.MainPhotoUrl = string.Empty;  // this needs to be updated! And the picture will be deleted at some point - we will not store huge pics.
             trip.MainPhotoSmallUrl = string.Empty;
-            
+
             Document document = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip), trip);
-            
+            //await AddQueueItem(new QueueParam { Id = document.Id, PictureUri = "photoName" });
+
             return Ok(document.Id);
         }
 
@@ -218,6 +249,35 @@ namespace JourneyNotesAPI.Controllers
             }
             return BadRequest();
         }
+
+        // NON ACTIONS
+        // ------------------------------------------------------------
+
+        [NonAction]
+        private async Task<string> StorePicture(IFormFile file)
+        {
+            var ext = Path.GetExtension(file.FileName);
+            CloudBlockBlob blockBlob = _container.GetBlockBlobReference(Guid.NewGuid().ToString() + ext);
+            blockBlob.Metadata.Add("FileName", file.FileName);
+            if (file.Length > 0)
+            {
+                using (var fileStream = file.OpenReadStream())
+                {
+                    await blockBlob.UploadFromStreamAsync(fileStream);
+                }
+            }
+            return blockBlob.Name;
+        }
+
+        [NonAction]
+        private async Task AddQueueItem(QueueParam queueParam)
+        {
+            {
+                CloudQueueMessage message = new CloudQueueMessage(queueParam.ToJson());
+                await _messageQueue.AddMessageAsync(message);
+            }
+        }
+
     }
 }
 

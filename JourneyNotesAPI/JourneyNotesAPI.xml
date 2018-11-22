@@ -29,7 +29,8 @@
             <summary>
             Updates a certain pitstop by PitstopId
             </summary>
-            <param name="id"></param>
+            <param name="TripId"></param>
+            <param name="PitstopId"></param>
             <param name="updatedPitstop"></param>
             <returns></returns>
         </member>
@@ -60,6 +61,7 @@
             Posts a new trip for a user
             </summary>
             <param name="newTrip"></param>
+            <param name="picture"></param>
             <returns></returns>
         </member>
         <member name="M:JourneyNotesAPI.Controllers.TripsController.PutTrip(System.Int32,JourneyEntities.EditedTrip)">
