@@ -13,7 +13,7 @@ using Microsoft.Extensions.Configuration;
 namespace JourneyNotesAPI.Controllers
 {
     [EnableCors("MyPolicy")]
-    [Route("api/[controller]/[Action]")]
+    [Route("api/[controller]")]
     [ApiController]
     public class PeopleController : ControllerBase
     {
@@ -44,6 +44,11 @@ namespace JourneyNotesAPI.Controllers
         //    return new string[] { "valueX", "valueY" };
         //}
 
+        /// <summary>
+        /// Gets the customer details by CustomerID
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         // GET: api/people/5
         [HttpGet("{id}", Name = "GetPerson")]
         public ActionResult<string> GetPerson(int id)
@@ -57,24 +62,29 @@ namespace JourneyNotesAPI.Controllers
             return Ok(person);
         }
 
-        // POST: api/person
+        /// <summary>
+        /// Adds a new person to the database
+        /// </summary>
+        /// <param name="person"></param>
+        /// <returns></returns>
+        // POST: api/people
         [HttpPost]
-        public async Task<ActionResult<string>> PostAsync([FromBody] Person person)
+        public async Task<ActionResult<string>> PostPerson([FromBody] Person person)
         {
             Document document = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePerson), person);
             return Ok(document.Id);
         }
 
         // PUT: api/Person/5
-        [HttpPut("{id}")]
-        public void PutPerson(int id, [FromBody] string value)
-        {
-        }
+        //[HttpPut("{id}")]
+        //public void PutPerson(int id, [FromBody] string value)
+        //{
+        //}
 
         // DELETE: api/ApiWithActions/5
-        [HttpDelete("{id}")]
-        public void DeletePerson(int id)
-        {
-        }
+        //[HttpDelete("{id}")]
+        //public void DeletePerson(int id)
+        //{
+        //}
     }
 }

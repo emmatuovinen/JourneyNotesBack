@@ -1,0 +1,81 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>JourneyNotesAPI</name>
+    </assembly>
+    <members>
+        <member name="M:JourneyNotesAPI.Controllers.PeopleController.GetPerson(System.Int32)">
+            <summary>
+            Gets the customer details by CustomerID
+            </summary>
+            <param name="id"></param>
+            <returns></returns>
+        </member>
+        <member name="M:JourneyNotesAPI.Controllers.PeopleController.PostPerson(JourneyEntities.Person)">
+            <summary>
+            Adds a new person to the database
+            </summary>
+            <param name="person"></param>
+            <returns></returns>
+        </member>
+        <member name="M:JourneyNotesAPI.Controllers.PitstopsController.PostPitstop(JourneyEntities.NewPitstop)">
+            <summary>
+            Adds a new Pitstop under the user and the chosen Trip
+            </summary>
+            <param name="newPitstop"></param>
+            <returns></returns>
+        </member>
+        <member name="M:JourneyNotesAPI.Controllers.PitstopsController.PutPitstop(System.Int32,System.Int32,JourneyEntities.NewPitstop)">
+            <summary>
+            Updates a certain pitstop by PitstopId
+            </summary>
+            <param name="id"></param>
+            <param name="updatedPitstop"></param>
+            <returns></returns>
+        </member>
+        <member name="M:JourneyNotesAPI.Controllers.PitstopsController.DeletePitstop(System.Int32,System.Int32)">
+            <summary>
+            Deletes a certain Pitstop by PitstopId
+            </summary>
+            <param name="PitstopId"></param>
+            <param name="TripId"></param>
+            <returns></returns>
+        </member>
+        <member name="M:JourneyNotesAPI.Controllers.TripsController.GetTrips(System.String)">
+            <summary>
+            Gets all the trips of the user by user id
+            </summary>
+            <param name="userID"></param>
+            <returns></returns>
+        </member>
+        <member name="M:JourneyNotesAPI.Controllers.TripsController.GetTripAndPitstops(System.Int32)">
+            <summary>
+            Gets the trip and the pitstops under it by trip id
+            </summary>
+            <param name="Id"></param>
+            <returns></returns>
+        </member>
+        <member name="M:JourneyNotesAPI.Controllers.TripsController.PostNewTrip(JourneyEntities.NewTrip)">
+            <summary>
+            Posts a new trip for a user
+            </summary>
+            <param name="newTrip"></param>
+            <returns></returns>
+        </member>
+        <member name="M:JourneyNotesAPI.Controllers.TripsController.PutTrip(System.Int32,JourneyEntities.EditedTrip)">
+            <summary>
+            Edits a trip by trip id
+            </summary>
+            <param name="id"></param>
+            <param name="editedTrip"></param>
+            <returns></returns>
+        </member>
+        <member name="M:JourneyNotesAPI.Controllers.TripsController.DeleteTrip(System.Int32)">
+            <summary>
+            Deletes a trip by trip id
+            </summary>
+            <param name="id"></param>
+            <returns></returns>
+        </member>
+    </members>
+</doc>
