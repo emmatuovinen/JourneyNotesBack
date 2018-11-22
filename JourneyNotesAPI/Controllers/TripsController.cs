@@ -48,11 +48,13 @@ namespace JourneyNotesAPI.Controllers
         /// <param name="userID"></param>
         /// <returns></returns>
         // GET: api/Trips
-        [HttpGet]
+        [HttpGet, Authorize]
         public ActionResult<IEnumerable<string>> GetTrips(string userID)
         {
             // Remember to check the safety of this method!
 
+            var currentUser = HttpContext.User;
+            var UserName = User.Identity.Name;
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
