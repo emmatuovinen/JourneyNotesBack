@@ -70,17 +70,6 @@ namespace JourneyNotesAPI
                 c.IncludeXmlComments(xmlPath);
             });
 
-
-            //Auth0 configuration
-            services.AddAuthentication(options =>
-            {
-                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-            }).AddJwtBearer(options =>
-            {
-                options.Authority = Configuration["Auth0:Authority"];
-                options.Audience = Configuration["Auth0:Audience"];
-            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
