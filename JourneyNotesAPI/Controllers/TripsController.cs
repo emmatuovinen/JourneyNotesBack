@@ -52,17 +52,20 @@ namespace JourneyNotesAPI.Controllers
         {
             _configuration = configuration;
 
-            // CosmosDB
-            var endpointUri = _configuration["ConnectionStrings:CosmosDbConnection:EndpointUri"];
-            var key = _configuration["ConnectionStrings:CosmosDbConnection:PrimaryKey"];
-
-            _client = new DocumentClient(new Uri(endpointUri), key);
-
-            // Queue
             var accountName = _configuration["ConnectionStrings:StorageConnection:AccountName"];
             var accountKey = _configuration["ConnectionStrings:StorageConnection:AccountKey"];
             _storageAccount = new CloudStorageAccount(new StorageCredentials(accountName, accountKey), true);
 
+            // CosmosDB
+            var endpointUri = _configuration["ConnectionStrings:CosmosDbConnection:EndpointUri"];
+            var key = _configuration["ConnectionStrings:CosmosDbConnection:PrimaryKey"];
+            _client = new DocumentClient(new Uri(endpointUri), key);
+
+            // Queue
+            _queueClient = _storageAccount.CreateCloudQueueClient();
+            _messageQueue = _queueClient.GetQueueReference(_queueName);
+
+            // Blob
             _blobClient = _storageAccount.CreateCloudBlobClient();
             _container = _blobClient.GetContainerReference(_containerName);
 
@@ -144,7 +147,7 @@ namespace JourneyNotesAPI.Controllers
         public async Task<ActionResult<string>> PostNewTrip(NewTrip newTrip)
         {
             //var person = HttpContext.User;
-            var person = kovakoodattuKayttaja;
+            var person = 45;
 
             //if (!ModelState.IsValid)
             //{
@@ -182,7 +185,11 @@ namespace JourneyNotesAPI.Controllers
 
             try
             {
-                await AddQueueItem(new QueueParam { Id = document.Id, PictureUri = photoName });
+                QueueParam toQueue = new QueueParam();
+                toQueue.Id = document.Id;
+                toQueue.PictureUri = photoName;
+
+                await AddQueueItem(toQueue);
             }
             catch (Exception exept)
             {
@@ -299,9 +306,15 @@ namespace JourneyNotesAPI.Controllers
         [NonAction]
         private async Task AddQueueItem(QueueParam queueParam)
         {
+            try
             {
                 CloudQueueMessage message = new CloudQueueMessage(queueParam.ToJson());
                 await _messageQueue.AddMessageAsync(message);
+            }
+            catch (Exception exe)
+            {
+                System.Diagnostics.Trace.WriteLine(exe.StackTrace);
+
             }
         }
 
