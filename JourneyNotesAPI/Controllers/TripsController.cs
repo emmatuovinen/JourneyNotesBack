@@ -167,14 +167,9 @@ namespace JourneyNotesAPI.Controllers
         [HttpPost(Name = "PostNewTrip")]
         [Consumes("multipart/form-data")]
         public async Task<ActionResult<string>> PostNewTrip(NewTrip newTrip)
-        {
-<<<<<<< HEAD
-            //var person = HttpContext.User;
-            var person = 45;
-=======
+        { 
             string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
             //string UserID = "666";
->>>>>>> master
 
             //if (!ModelState.IsValid)
             //{
