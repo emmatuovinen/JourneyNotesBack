@@ -54,8 +54,8 @@ namespace JourneyNotesAPI.Controllers
         [HttpGet(Name = "GetPerson")]
         public ActionResult<string> GetPerson()
         {
-            //string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
-            string UserID = "google-oauth2|117078475562561555790";
+            string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            //string UserID = "666";
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Person> query = _client.CreateDocumentQuery<Person>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePerson),
@@ -89,8 +89,8 @@ namespace JourneyNotesAPI.Controllers
         [HttpPut]
         public async Task<ActionResult<string>> PutPerson([FromBody] NewPerson editperson)
         {
-            //string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
-            string UserID = "google-oauth2|117078475562561555790";
+            string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            //string UserID = "666";
 
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Person> query = _client.CreateDocumentQuery<Person>(
@@ -98,28 +98,31 @@ namespace JourneyNotesAPI.Controllers
             $"SELECT * FROM C WHERE C.PersonId = '{UserID}'", queryOptions);
             var personDB = query.ToList().FirstOrDefault();
 
-            string documentId = personDB.id;
+            if (personDB != null)
+            {
+                string documentId = personDB.id;
 
-            var documentUri = UriFactory.CreateDocumentUri(_dbName, _collectionNamePerson, documentId);
+                var documentUri = UriFactory.CreateDocumentUri(_dbName, _collectionNamePerson, documentId);
 
-            Document document = await _client.ReadDocumentAsync(documentUri);
+                Document document = await _client.ReadDocumentAsync(documentUri);
 
-            personDB.PersonId = UserID;
-            personDB.Nickname = editperson.Nickname;
-            personDB.Avatar = editperson.Avatar;
+                personDB.PersonId = UserID;
+                personDB.Nickname = editperson.Nickname;
+                personDB.Avatar = editperson.Avatar;
 
-            await _client.ReplaceDocumentAsync(document.SelfLink, personDB);
+                await _client.ReplaceDocumentAsync(document.SelfLink, personDB);
 
-            return Ok(document.Id);
-            
+                return Ok(document.Id);
+            }
+            return NotFound();
         }
 
         //DELETE: api/ApiWithActions/5
         [HttpDelete()]
         public async Task<ActionResult<string>> DeletePerson()
         {
-            //string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
-            string UserID = "google-oauth2|117078475562561555790";
+            string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            //string UserID = "666";
 
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Person> query = _client.CreateDocumentQuery<Person>(
@@ -128,14 +131,12 @@ namespace JourneyNotesAPI.Controllers
             var personDB = query.ToList().FirstOrDefault();
 
             //to delete a user - first deletes all of users pitstops, then trips and then the user
-            
 
-
-
-
-            string documentId = personDB.id;
-            try
+            if (personDB != null)
+            {
+                try
                 {
+                    string documentId = personDB.id;
                     await _client.DeleteDocumentAsync(UriFactory.CreateDocumentUri(_dbName, _collectionNamePerson, documentId));
                     return Ok($"Deleted user from Journey Notes");
                 }
@@ -147,7 +148,8 @@ namespace JourneyNotesAPI.Controllers
                             return NotFound();
                     }
                 }
-                return BadRequest();           
+            }
+            return NotFound();           
 
         }
     }

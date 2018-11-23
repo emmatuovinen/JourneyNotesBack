@@ -52,7 +52,6 @@ namespace JourneyNotesAPI.Controllers
             // CosmosDB
             var endpointUri = _configuration["ConnectionStrings:CosmosDbConnection:EndpointUri"];
             var key = _configuration["ConnectionStrings:CosmosDbConnection:PrimaryKey"];
-
             _client = new DocumentClient(new Uri(endpointUri), key);
 
             // Queue
@@ -71,11 +70,11 @@ namespace JourneyNotesAPI.Controllers
         /// <param name="userID"></param>
         /// <returns></returns>
         // GET: api/Trips
-        [HttpGet, Authorize]
+        [HttpGet]
         public async Task<ActionResult<IEnumerable<string>>> GetTrips()
         {
-            //string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
-            string UserID = "google-oauth2|117078475562561555790";
+            string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            //string UserID = "666";
             var triplist = new List<Trip>();
 
             //Check if user exists
@@ -90,8 +89,10 @@ namespace JourneyNotesAPI.Controllers
                 FeedOptions queryOptions2 = new FeedOptions { MaxItemCount = -1 };
                 IQueryable<Trip> query2 = _client.CreateDocumentQuery<Trip>(
                 UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
-                $"SELECT * FROM C WHERE C.PersonId = '{UserID}'", queryOptions);
+                $"SELECT * FROM C WHERE C.PersonId = '{UserID}' Order by C.StartDate", queryOptions2);
                 triplist = query2.ToList();
+                if (triplist == null)
+                    return Ok("[]");
             }
             else
             {
@@ -104,7 +105,6 @@ namespace JourneyNotesAPI.Controllers
                 };
                 Document document = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePerson), person);
             }
-
             return Ok(triplist);
         }
 
@@ -131,8 +131,8 @@ namespace JourneyNotesAPI.Controllers
         [HttpGet("{Id}", Name = "GetTripAndPitstops")]
         public ActionResult<string> GetTripAndPitstops(int Id)
         {
-            //string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
-            string UserID = "google-oauth2|117078475562561555790";
+            string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            //string UserID = "666";
 
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
@@ -140,12 +140,16 @@ namespace JourneyNotesAPI.Controllers
             $"SELECT * FROM T WHERE T.TripId = {Id} AND T.PersonId = '{UserID}'", queryOptions);
             Trip tripDetails = query.ToList().FirstOrDefault();
 
+            if (tripDetails == null)
+                return NotFound();
+
             IQueryable<Pitstop> query2 = _client.CreateDocumentQuery<Pitstop>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop),
-            $"SELECT * FROM C WHERE C.TripId = {Id} AND C.PersonId = '{UserID}'", queryOptions);
+            $"SELECT * FROM C WHERE C.TripId = {Id} AND C.PersonId = '{UserID}' Order by C.PitstopDate", queryOptions);
             var pitstops = query2.ToList();
 
-            tripDetails.Pitstops = pitstops;
+            
+           tripDetails.Pitstops = pitstops;
 
             return Ok(tripDetails);
         }
@@ -160,8 +164,8 @@ namespace JourneyNotesAPI.Controllers
         [Consumes("multipart/form-data")]
         public async Task<ActionResult<string>> PostNewTrip(NewTrip newTrip)
         {
-            //string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
-            string UserID = "google-oauth2|117078475562561555790";
+            string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            //string UserID = "666";
 
             //if (!ModelState.IsValid)
             //{
@@ -219,8 +223,8 @@ namespace JourneyNotesAPI.Controllers
         [HttpPut("{id}")]
         public async Task<ActionResult<string>> PutTrip(int id, [FromBody] EditedTrip editedTrip)
         {
-            //string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
-            string UserID = "google-oauth2|117078475562561555790";
+            string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            //string UserID = "666";
 
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
@@ -228,22 +232,26 @@ namespace JourneyNotesAPI.Controllers
             $"SELECT * FROM C WHERE C.TripId = {id} AND C.PersonId = '{UserID}'", queryOptions);
             var trip = query.ToList().FirstOrDefault();
 
-            string documentId = trip.id;
+            if (trip != null)
+            {
+                string documentId = trip.id;
 
-            var documentUri = UriFactory.CreateDocumentUri(_dbName, _collectionNameTrip, documentId);
+                var documentUri = UriFactory.CreateDocumentUri(_dbName, _collectionNameTrip, documentId);
 
-            Document document = await _client.ReadDocumentAsync(documentUri);
-            trip.PersonId = UserID;
-            trip.Headline = editedTrip.Headline;
-            trip.Description = editedTrip.Description;
-            trip.StartDate = editedTrip.StartDate;
-            trip.EndDate = editedTrip.EndDate;
-            trip.MainPhotoUrl = string.Empty;  // this needs to be updated! And the picture will be deleted at some point - we will not store huge pics.
-            trip.MainPhotoSmallUrl = string.Empty;
+                Document document = await _client.ReadDocumentAsync(documentUri);
+                trip.PersonId = UserID;
+                trip.Headline = editedTrip.Headline;
+                trip.Description = editedTrip.Description;
+                trip.StartDate = editedTrip.StartDate;
+                trip.EndDate = editedTrip.EndDate;
+                trip.MainPhotoUrl = string.Empty;  // this needs to be updated! And the picture will be deleted at some point - we will not store huge pics.
+                trip.MainPhotoSmallUrl = string.Empty;
 
-            await _client.ReplaceDocumentAsync(document.SelfLink, trip);
+                await _client.ReplaceDocumentAsync(document.SelfLink, trip);
 
-            return Ok(document.Id);
+                return Ok(document.Id);
+            }
+            return NotFound();
         }
 
         /// <summary>
@@ -256,9 +264,9 @@ namespace JourneyNotesAPI.Controllers
         [HttpDelete("{id}")]
         public async Task<ActionResult<string>> DeleteTrip(int id)
         {
-            //string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
-            string UserID = "google-oauth2|117078475562561555790";
-           
+            string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            //string UserID = "666;
+
             //get all pitstops for the trip to be deleted
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Pitstop> query = _client.CreateDocumentQuery<Pitstop>(
@@ -273,7 +281,7 @@ namespace JourneyNotesAPI.Controllers
                 try
                 {
                     await _client.DeleteDocumentAsync(
-                     UriFactory.CreateDocumentUri(_dbName, _collectionNamePitstop, documentId));
+                    UriFactory.CreateDocumentUri(_dbName, _collectionNamePitstop, documentId));
 
                 }
                 catch (DocumentClientException de)
@@ -292,22 +300,25 @@ namespace JourneyNotesAPI.Controllers
             $"SELECT * FROM T WHERE T.TripId = {id} AND T.PersonId = '{UserID}'", queryOptions);
             var trip = query2.ToList().FirstOrDefault();
 
-            string TripDbId = trip.id;
-
-            try
+            if (trip != null)
             {
-                await _client.DeleteDocumentAsync(UriFactory.CreateDocumentUri(_dbName, _collectionNameTrip, TripDbId));
-                return Ok($"Deleted trip {id} and all pitstops therein");
-            }
-            catch (DocumentClientException de)
-            {
-                switch (de.StatusCode.Value)
+                try
                 {
-                    case System.Net.HttpStatusCode.NotFound:
-                        return NotFound();
+                    string TripDbId = trip.id;
+
+                    await _client.DeleteDocumentAsync(UriFactory.CreateDocumentUri(_dbName, _collectionNameTrip, TripDbId));
+                    return Ok($"Deleted trip {id} and all pitstops therein");
+                }
+                catch (DocumentClientException de)
+                {
+                    switch (de.StatusCode.Value)
+                    {
+                        case System.Net.HttpStatusCode.NotFound:
+                            return NotFound();
+                    }
                 }
             }
-            return BadRequest();
+            return NotFound();
         }
 
         // NON ACTIONS

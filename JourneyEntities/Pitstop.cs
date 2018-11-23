@@ -43,8 +43,6 @@ namespace JourneyEntities
 
         public DateTime PitstopDate { get; set; }
 
-        public int TripId { get; set; }
-
         public int Latitude { get; set; }
 
         public int Longitude { get; set; }
