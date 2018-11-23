@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Http;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -50,5 +51,7 @@ namespace JourneyEntities
         public int Longitude { get; set; }
 
         public string Address { get; set; }
+
+        public IFormFile picture { get; set; }
     }
 }

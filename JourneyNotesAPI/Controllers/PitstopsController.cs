@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using JourneyEntities;
@@ -9,6 +10,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
 using Microsoft.Extensions.Configuration;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Auth;
+using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.WindowsAzure.Storage.Queue;
 
 namespace JourneyNotesAPI.Controllers
 {
@@ -27,6 +32,17 @@ namespace JourneyNotesAPI.Controllers
         private const string _collectionNameTrip = "Trip";
         private const string _collectionNamePitstop = "Pitstop";
 
+        // Queue
+        private readonly CloudStorageAccount _storageAccount;
+        private readonly CloudQueueClient _queueClient;
+        private readonly CloudQueue _messageQueue;
+        private const string _queueName = "journeynotes";
+
+        // Blob
+        private readonly CloudBlobClient _blobClient;
+        private readonly CloudBlobContainer _container;
+        private const string _containerName = "photos";
+
         public PitstopsController(IConfiguration configuration)
         {
             _configuration = configuration;
@@ -38,6 +54,14 @@ namespace JourneyNotesAPI.Controllers
             _configuration["ConnectionStrings:CosmosDbConnection:PrimaryKey"];
 
             _client = new DocumentClient(new Uri(endpointUri), key);
+
+            // Queue
+            var accountName = _configuration["ConnectionStrings:StorageConnection:AccountName"];
+            var accountKey = _configuration["ConnectionStrings:StorageConnection:AccountKey"];
+            _storageAccount = new CloudStorageAccount(new StorageCredentials(accountName, accountKey), true);
+
+            _blobClient = _storageAccount.CreateCloudBlobClient();
+            _container = _blobClient.GetContainerReference(_containerName);
 
         }
 
@@ -80,6 +104,7 @@ namespace JourneyNotesAPI.Controllers
         /// <returns></returns>
         // POST/Pitstop
         [HttpPost]
+        [Consumes("multipart/form-data")]
         public async Task<ActionResult<string>> PostPitstop([FromBody] NewPitstop newPitstop)
         {
             // We need to get the TripId and the PersonId from the http request!
@@ -88,6 +113,8 @@ namespace JourneyNotesAPI.Controllers
             var TripId = newPitstop.TripId;
             //var personId = HttpContext.User;
             var personId = kovakoodattuKayttaja;
+
+            string photoName = await StorePicture(newPitstop.picture);
 
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Pitstop> query = _client.CreateDocumentQuery<Pitstop>(
@@ -131,7 +158,19 @@ namespace JourneyNotesAPI.Controllers
             //await _client.ReplaceDocumentAsync(documentTrip.SelfLink, updateTrip);
 
             Document documentPitstop = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop), pitstop);
-            return Ok(documentPitstop.Id);
+            //return Ok(documentPitstop.Id);
+
+            try
+            {
+                await AddQueueItem(new QueueParam { Id = documentPitstop.Id, PictureUri = photoName });
+            }
+            catch (Exception exept)
+            {
+                System.Diagnostics.Trace.WriteLine(exept.StackTrace);
+            }
+
+            //return Ok(document.Id);
+            return Ok($"Pitstop created, id: {documentPitstop.Id}");
         }
 
         /// <summary>
@@ -210,6 +249,42 @@ namespace JourneyNotesAPI.Controllers
                 }
             }
             return BadRequest();
+        }
+
+        [NonAction]
+        private async Task<string> StorePicture(IFormFile file)
+        {
+            var ext = Path.GetExtension(file.FileName);
+
+            try
+            {
+                CloudBlockBlob blockBlob = _container.GetBlockBlobReference(Guid.NewGuid().ToString() + ext);
+                blockBlob.Metadata.Add("FileName", file.FileName);
+                if (file.Length > 0)
+                {
+                    using (var fileStream = file.OpenReadStream())
+                    {
+                        await blockBlob.UploadFromStreamAsync(fileStream);
+                    }
+                }
+                return blockBlob.Name;
+
+            }
+            catch (Exception e)
+            {
+                System.Diagnostics.Trace.WriteLine(e.StackTrace);
+                return null;
+            }
+
+        }
+
+        [NonAction]
+        private async Task AddQueueItem(QueueParam queueParam)
+        {
+            {
+                CloudQueueMessage message = new CloudQueueMessage(queueParam.ToJson());
+                await _messageQueue.AddMessageAsync(message);
+            }
         }
     }
 }
