@@ -10,7 +10,7 @@ namespace JourneyEntities
 
         public int PitstopId { get; set; }
 
-        public int PersonId { get; set; }
+        public string PersonId { get; set; }
 
         public string Title { get; set; }
 

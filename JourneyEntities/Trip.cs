@@ -8,7 +8,7 @@ namespace JourneyEntities
     {
         public int TripId { get; set; }
 
-        public int PersonId { get; set; }
+        public string PersonId { get; set; }
 
         public string Headline { get; set; }
 

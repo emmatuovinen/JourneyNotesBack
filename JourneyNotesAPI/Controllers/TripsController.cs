@@ -73,16 +73,35 @@ namespace JourneyNotesAPI.Controllers
         [HttpGet, Authorize]
         public ActionResult<IEnumerable<string>> GetTrips(string userID)
         {
-          
+            string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+
+            //Check if user exists
+            FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
+            IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
+            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePerson),
+            $"SELECT * FROM C WHERE C.PersonId = {userID}", queryOptions);
+            var userCount = query.ToList().Count;
+
+            if(userCount != 0)
+            {
+                FeedOptions queryOptions2 = new FeedOptions { MaxItemCount = -1 };
+                IQueryable<Trip> query2 = _client.CreateDocumentQuery<Trip>(
+                UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
+                $"SELECT * FROM C WHERE C.PersonId = {userID}", queryOptions);
+                var tripList = query2.ToList();
+            }
+            else
+            {
+                //Add user to Person-Collection and send a welcome message
+                var triplist = ""
+            }
+
+
             // Remember to check the safety of this method!
 
             string userId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
     
-            FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
-            IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
-            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
-            $"SELECT * FROM C WHERE C.PersonId = {userID}", queryOptions);
-            var tripList = query.ToList();
+           
 
             return Ok(tripList);
         }
