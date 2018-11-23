@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using JourneyEntities;
 using Microsoft.AspNetCore.Cors;
@@ -17,9 +18,6 @@ namespace JourneyNotesAPI.Controllers
     [ApiController]
     public class PitstopsController : ControllerBase
     {
-        // HUOM!! MUISTA POISTAA TÄMÄ KOVAKOODATTU KÄYTTÄJÄ !!!
-        int kovakoodattuKayttaja = 70;
-
         private readonly IConfiguration _configuration;
         private readonly DocumentClient _client;
         private const string _dbName = "JourneyNotesDB";
@@ -30,13 +28,8 @@ namespace JourneyNotesAPI.Controllers
         public PitstopsController(IConfiguration configuration)
         {
             _configuration = configuration;
-
-            var endpointUri =
-            _configuration["ConnectionStrings:CosmosDbConnection:EndpointUri"];
-
-            var key =
-            _configuration["ConnectionStrings:CosmosDbConnection:PrimaryKey"];
-
+            var endpointUri = _configuration["ConnectionStrings:CosmosDbConnection:EndpointUri"];
+            var key = _configuration["ConnectionStrings:CosmosDbConnection:PrimaryKey"];
             _client = new DocumentClient(new Uri(endpointUri), key);
 
         }
@@ -82,17 +75,16 @@ namespace JourneyNotesAPI.Controllers
         [HttpPost]
         public async Task<ActionResult<string>> PostPitstop([FromBody] NewPitstop newPitstop)
         {
-            // We need to get the TripId and the PersonId from the http request!
-
+            //string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            string UserID = "google-oauth2|117078475562561555790";
+           
+            // We need to get the TripId from the http request!
             Pitstop pitstop = new Pitstop();
             var TripId = newPitstop.TripId;
-            //var personId = HttpContext.User;
-            var personId = kovakoodattuKayttaja;
-
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Pitstop> query = _client.CreateDocumentQuery<Pitstop>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop),
-            $"SELECT * FROM C WHERE C.TripId = {TripId} AND C.PersonId = {personId}", queryOptions);
+            $"SELECT * FROM C WHERE C.TripId = {TripId} AND C.PersonId = '{UserID}'", queryOptions);
             var pitstopCount = query.ToList().Count;
 
             if (pitstopCount == 0)
@@ -100,7 +92,7 @@ namespace JourneyNotesAPI.Controllers
             else
                 pitstopCount = query.ToList().Max(a => a.PitstopId);
 
-            pitstop.PersonId = personId;
+            pitstop.PersonId = UserID;
             pitstop.PitstopId = pitstopCount + 1;
             pitstop.Title = newPitstop.Title;
             pitstop.Note = newPitstop.Note;
@@ -145,13 +137,13 @@ namespace JourneyNotesAPI.Controllers
         [HttpPut("{TripId}/{PitstopId}")]
         public async Task<ActionResult<string>> PutPitstop([FromRoute] int TripId, [FromRoute] int PitstopId, [FromBody] NewPitstop updatedPitstop)
         {
-            //var person = HttpContext.User;
-            var person = kovakoodattuKayttaja;
+            string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            //var UserID = "70";
 
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Pitstop> query = _client.CreateDocumentQuery<Pitstop>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop),
-            $"SELECT * FROM C WHERE C.PitstopId = {PitstopId} AND C.TripId = {TripId} AND C.PersonId = {person}", queryOptions);
+            $"SELECT * FROM C WHERE C.PitstopId = {PitstopId} AND C.TripId = {TripId} AND C.PersonId = '{UserID}'", queryOptions);
             Pitstop pitstop = query.ToList().FirstOrDefault();
 
             pitstop.Title = updatedPitstop.Title;
@@ -183,14 +175,14 @@ namespace JourneyNotesAPI.Controllers
         [HttpDelete("{TripId}/{PitstopId}")]
         public async Task<ActionResult<string>> DeletePitstop([FromRoute] int TripId, [FromRoute] int PitstopId)
         {
-            //var person = HttpContext.User;
-            var person = kovakoodattuKayttaja;
+            //string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            string UserID = "google-oauth2|117078475562561555790";
 
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Pitstop> query = _client.CreateDocumentQuery<Pitstop>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop),
             //$"SELECT * FROM C WHERE C.PitstopId = {PitstopId} AND C.PersonId = {person}", queryOptions);
-            $"SELECT * FROM C where C.TripId = {TripId} AND C.PersonId = {person} AND C.PitstopId = {PitstopId}", queryOptions);
+            $"SELECT * FROM C where C.TripId = {TripId} AND C.PersonId = '{UserID}' AND C.PitstopId = {PitstopId}", queryOptions);
             var pitstop = query.ToList().FirstOrDefault();
 
             string DbId = pitstop.id;

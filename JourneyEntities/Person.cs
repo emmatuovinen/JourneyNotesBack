@@ -13,5 +13,12 @@ namespace JourneyEntities
         public string id { get; set; }
     }
 
+    public class NewPerson
+    {
+        public string Nickname { get; set; }
+
+        public string Avatar { get; set; }
+
+    }
 
 }

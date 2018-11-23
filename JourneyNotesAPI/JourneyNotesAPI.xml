@@ -4,18 +4,18 @@
         <name>JourneyNotesAPI</name>
     </assembly>
     <members>
-        <member name="M:JourneyNotesAPI.Controllers.PeopleController.GetPerson(System.Int32)">
+        <member name="M:JourneyNotesAPI.Controllers.PeopleController.GetPerson">
             <summary>
             Gets the customer details by CustomerID
             </summary>
             <param name="id"></param>
             <returns></returns>
         </member>
-        <member name="M:JourneyNotesAPI.Controllers.PeopleController.PostPerson(JourneyEntities.Person)">
+        <member name="M:JourneyNotesAPI.Controllers.PeopleController.PostPerson(JourneyEntities.NewPerson)">
             <summary>
             Adds a new person to the database
             </summary>
-            <param name="person"></param>
+            <param name="newperson"></param>
             <returns></returns>
         </member>
         <member name="M:JourneyNotesAPI.Controllers.PitstopsController.PostPitstop(JourneyEntities.NewPitstop)">
@@ -42,7 +42,7 @@
             <param name="TripId"></param>
             <returns></returns>
         </member>
-        <member name="M:JourneyNotesAPI.Controllers.TripsController.GetTrips(System.String)">
+        <member name="M:JourneyNotesAPI.Controllers.TripsController.GetTrips">
             <summary>
             Gets all the trips of the user by user id
             </summary>
@@ -74,7 +74,7 @@
         </member>
         <member name="M:JourneyNotesAPI.Controllers.TripsController.DeleteTrip(System.Int32)">
             <summary>
-            Deletes a trip by trip id
+            Deletes a trip by trip id and the pitstops related to that trip
             </summary>
             <param name="id"></param>
             <returns></returns>

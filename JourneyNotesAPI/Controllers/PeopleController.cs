@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using JourneyEntities;
 using Microsoft.AspNetCore.Cors;
@@ -50,13 +51,15 @@ namespace JourneyNotesAPI.Controllers
         /// <param name="id"></param>
         /// <returns></returns>
         // GET: api/people/5
-        [HttpGet("{id}", Name = "GetPerson")]
-        public ActionResult<string> GetPerson(int id)
+        [HttpGet(Name = "GetPerson")]
+        public ActionResult<string> GetPerson()
         {
+            //string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            string UserID = "google-oauth2|117078475562561555790";
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Person> query = _client.CreateDocumentQuery<Person>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePerson),
-            $"SELECT * FROM C WHERE C.PersonId = {id}", queryOptions);
+            $"SELECT * FROM C WHERE C.PersonId = '{UserID}'", queryOptions);
             var person = query.ToList().FirstOrDefault();
 
             return Ok(person);
@@ -65,26 +68,87 @@ namespace JourneyNotesAPI.Controllers
         /// <summary>
         /// Adds a new person to the database
         /// </summary>
-        /// <param name="person"></param>
+        /// <param name="newperson"></param>
         /// <returns></returns>
         // POST: api/people
-        [HttpPost]
-        public async Task<ActionResult<string>> PostPerson([FromBody] Person person)
+        //[HttpPost]
+        //public async Task<ActionResult<string>> PostPerson([FromBody] NewPerson newperson)
+        //{
+        //    Person person = new Person
+        //    {
+        //        PersonId = "666",
+        //        //PersonId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value,
+        //        Nickname = newperson.Nickname,
+        //        Avatar = newperson.Avatar,
+        //    };
+        //    Document document = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePerson), person);
+        //    return Ok(document.Id);
+        //}
+
+        //put: api/person
+        [HttpPut]
+        public async Task<ActionResult<string>> PutPerson([FromBody] NewPerson editperson)
         {
-            Document document = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePerson), person);
+            //string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            string UserID = "google-oauth2|117078475562561555790";
+
+            FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
+            IQueryable<Person> query = _client.CreateDocumentQuery<Person>(
+            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePerson),
+            $"SELECT * FROM C WHERE C.PersonId = '{UserID}'", queryOptions);
+            var personDB = query.ToList().FirstOrDefault();
+
+            string documentId = personDB.id;
+
+            var documentUri = UriFactory.CreateDocumentUri(_dbName, _collectionNamePerson, documentId);
+
+            Document document = await _client.ReadDocumentAsync(documentUri);
+
+            personDB.PersonId = UserID;
+            personDB.Nickname = editperson.Nickname;
+            personDB.Avatar = editperson.Avatar;
+
+            await _client.ReplaceDocumentAsync(document.SelfLink, personDB);
+
             return Ok(document.Id);
+            
         }
 
-        // PUT: api/Person/5
-        //[HttpPut("{id}")]
-        //public void PutPerson(int id, [FromBody] string value)
-        //{
-        //}
+        //DELETE: api/ApiWithActions/5
+        [HttpDelete()]
+        public async Task<ActionResult<string>> DeletePerson()
+        {
+            //string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            string UserID = "google-oauth2|117078475562561555790";
 
-        // DELETE: api/ApiWithActions/5
-        //[HttpDelete("{id}")]
-        //public void DeletePerson(int id)
-        //{
-        //}
+            FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
+            IQueryable<Person> query = _client.CreateDocumentQuery<Person>(
+            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePerson),
+            $"SELECT * FROM C WHERE C.PersonId = '{UserID}'", queryOptions);
+            var personDB = query.ToList().FirstOrDefault();
+
+            //to delete a user - first deletes all of users pitstops, then trips and then the user
+            
+
+
+
+
+            string documentId = personDB.id;
+            try
+                {
+                    await _client.DeleteDocumentAsync(UriFactory.CreateDocumentUri(_dbName, _collectionNamePerson, documentId));
+                    return Ok($"Deleted user from Journey Notes");
+                }
+                catch (DocumentClientException de)
+                {
+                    switch (de.StatusCode.Value)
+                    {
+                        case System.Net.HttpStatusCode.NotFound:
+                            return NotFound();
+                    }
+                }
+                return BadRequest();           
+
+        }
     }
 }
