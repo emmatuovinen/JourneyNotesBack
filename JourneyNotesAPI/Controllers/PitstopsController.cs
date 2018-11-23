@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using JourneyEntities;
 using Microsoft.AspNetCore.Cors;
@@ -22,9 +23,6 @@ namespace JourneyNotesAPI.Controllers
     [ApiController]
     public class PitstopsController : ControllerBase
     {
-        // HUOM!! MUISTA POISTAA TÄMÄ KOVAKOODATTU KÄYTTÄJÄ !!!
-        int kovakoodattuKayttaja = 70;
-
         private readonly IConfiguration _configuration;
         private readonly DocumentClient _client;
         private const string _dbName = "JourneyNotesDB";
@@ -46,13 +44,8 @@ namespace JourneyNotesAPI.Controllers
         public PitstopsController(IConfiguration configuration)
         {
             _configuration = configuration;
-
-            var endpointUri =
-            _configuration["ConnectionStrings:CosmosDbConnection:EndpointUri"];
-
-            var key =
-            _configuration["ConnectionStrings:CosmosDbConnection:PrimaryKey"];
-
+            var endpointUri = _configuration["ConnectionStrings:CosmosDbConnection:EndpointUri"];
+            var key = _configuration["ConnectionStrings:CosmosDbConnection:PrimaryKey"];
             _client = new DocumentClient(new Uri(endpointUri), key);
 
             // Queue
@@ -103,74 +96,90 @@ namespace JourneyNotesAPI.Controllers
         /// <param name="newPitstop"></param>
         /// <returns></returns>
         // POST/Pitstop
-        [HttpPost]
-        [Consumes("multipart/form-data")]
-        public async Task<ActionResult<string>> PostPitstop([FromBody] NewPitstop newPitstop)
-        {
-            // We need to get the TripId and the PersonId from the http request!
 
-            Pitstop pitstop = new Pitstop();
-            var TripId = newPitstop.TripId;
-            //var personId = HttpContext.User;
-            var personId = kovakoodattuKayttaja;
+
+        [HttpPost("{TripId}")]
+        [Consumes("multipart/form-data")]
+        public async Task<ActionResult<string>> PostPitstop (NewPitstop newPitstop)
+
+        {
+            string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            //string UserID = "666";
+            int tripId = 1;
+
+            //Check if tripID exisists in Trips...
+            FeedOptions queryOptionsT = new FeedOptions { MaxItemCount = -1 };
+            IQueryable<Pitstop> queryT = _client.CreateDocumentQuery<Pitstop>(
+            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
+            $"SELECT * FROM C WHERE C.TripId = {tripId} AND C.PersonId = '{UserID}'", queryOptionsT);
+            var Trip = queryT.ToList().Count;
 
             string photoName = await StorePicture(newPitstop.picture);
 
-            FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
-            IQueryable<Pitstop> query = _client.CreateDocumentQuery<Pitstop>(
-            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop),
-            $"SELECT * FROM C WHERE C.TripId = {TripId} AND C.PersonId = {personId}", queryOptions);
-            var pitstopCount = query.ToList().Count;
-
-            if (pitstopCount == 0)
-                pitstopCount = 0;
-            else
-                pitstopCount = query.ToList().Max(a => a.PitstopId);
-
-            pitstop.PersonId = personId;
-            pitstop.PitstopId = pitstopCount + 1;
-            pitstop.Title = newPitstop.Title;
-            pitstop.Note = newPitstop.Note;
-            pitstop.PitstopDate = newPitstop.PitstopDate;
-            pitstop.PhotoOriginalUrl = string.Empty; // Remember to update
-            pitstop.PhotoLargeUrl = string.Empty;
-            pitstop.PhotoMediumUrl = string.Empty;
-            pitstop.PhotoSmallUrl = string.Empty; // will be updated when the queue has done it's job.
-            pitstop.TripId = newPitstop.TripId;
-            pitstop.Latitude = newPitstop.Latitude;
-            pitstop.Longitude = newPitstop.Longitude;
-            pitstop.Address = newPitstop.Address;
-
-            // Updating the List<Pitstop> for the trip
-            //FeedOptions queryOptions2 = new FeedOptions { MaxItemCount = -1 };
-            //IQueryable<Trip> query2 = _client.CreateDocumentQuery<Trip>(
-            //UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
-            //$"SELECT * FROM T WHERE T.PersonId = {personId} AND T.TripId = {TripId}", queryOptions);
-            //var updateTrip = query2.ToList().FirstOrDefault();
-
-            //updateTrip.MainPhotoUrl = "test";
-            //updateTrip.Pitstops.Add(pitstop);
-            //string documentId = updateTrip.id;
-
-            //var documentUri = UriFactory.CreateDocumentUri(_dbName, _collectionNameTrip, documentId);
-            //Document documentTrip = await _client.ReadDocumentAsync(documentUri);
-
-            //await _client.ReplaceDocumentAsync(documentTrip.SelfLink, updateTrip);
-
-            Document documentPitstop = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop), pitstop);
-            //return Ok(documentPitstop.Id);
-
-            try
+            if (Trip != 0)
             {
-                await AddQueueItem(new QueueParam { Id = documentPitstop.Id, PictureUri = photoName });
-            }
-            catch (Exception exept)
-            {
-                System.Diagnostics.Trace.WriteLine(exept.StackTrace);
+
+                // We need to get the TripId from the http request!
+                Pitstop pitstop = new Pitstop();
+                FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
+                IQueryable<Pitstop> query = _client.CreateDocumentQuery<Pitstop>(
+                UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop),
+                $"SELECT * FROM C WHERE C.TripId = {tripId} AND C.PersonId = '{UserID}'", queryOptions);
+                var pitstopCount = query.ToList().Count;
+
+                if (pitstopCount == 0)
+                    pitstopCount = 0;
+                else
+                    pitstopCount = query.ToList().Max(a => a.PitstopId);
+
+                pitstop.PersonId = UserID;
+                pitstop.PitstopId = pitstopCount + 1;
+                pitstop.Title = newPitstop.Title;
+                pitstop.Note = newPitstop.Note;
+                pitstop.PitstopDate = newPitstop.PitstopDate;
+                pitstop.PhotoOriginalUrl = string.Empty; // Remember to update
+                pitstop.PhotoLargeUrl = string.Empty;
+                pitstop.PhotoMediumUrl = string.Empty;
+                pitstop.PhotoSmallUrl = string.Empty; // will be updated when the queue has done it's job.
+                pitstop.TripId = tripId;
+                pitstop.Latitude = newPitstop.Latitude;
+                pitstop.Longitude = newPitstop.Longitude;
+                pitstop.Address = newPitstop.Address;
+
+                // Updating the List<Pitstop> for the trip
+                //FeedOptions queryOptions2 = new FeedOptions { MaxItemCount = -1 };
+                //IQueryable<Trip> query2 = _client.CreateDocumentQuery<Trip>(
+                //UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
+                //$"SELECT * FROM T WHERE T.PersonId = {personId} AND T.TripId = {TripId}", queryOptions);
+                //var updateTrip = query2.ToList().FirstOrDefault();
+
+                //updateTrip.MainPhotoUrl = "test";
+                //updateTrip.Pitstops.Add(pitstop);
+                //string documentId = updateTrip.id;
+
+                //var documentUri = UriFactory.CreateDocumentUri(_dbName, _collectionNameTrip, documentId);
+                //Document documentTrip = await _client.ReadDocumentAsync(documentUri);
+
+                //await _client.ReplaceDocumentAsync(documentTrip.SelfLink, updateTrip);
+
+                Document documentPitstop = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop), pitstop);
+                //try
+                //{
+                //    await AddQueueItem(new QueueParam { Id = documentPitstop.Id, PictureUri = photoName });
+                //}
+                //catch (Exception exept)
+                //{
+                //    System.Diagnostics.Trace.WriteLine(exept.StackTrace);
+                //}
+
+                //return Ok(documentPitstop.Id);
+                return Ok($"Pitstop created, id: {documentPitstop.Id}");
+
             }
 
-            //return Ok(document.Id);
-            return Ok($"Pitstop created, id: {documentPitstop.Id}");
+            return NotFound();
+
+
         }
 
         /// <summary>
@@ -184,31 +193,35 @@ namespace JourneyNotesAPI.Controllers
         [HttpPut("{TripId}/{PitstopId}")]
         public async Task<ActionResult<string>> PutPitstop([FromRoute] int TripId, [FromRoute] int PitstopId, [FromBody] NewPitstop updatedPitstop)
         {
-            //var person = HttpContext.User;
-            var person = kovakoodattuKayttaja;
+            string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            //string UserID = "666";
 
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Pitstop> query = _client.CreateDocumentQuery<Pitstop>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop),
-            $"SELECT * FROM C WHERE C.PitstopId = {PitstopId} AND C.TripId = {TripId} AND C.PersonId = {person}", queryOptions);
+            $"SELECT * FROM C WHERE C.PitstopId = {PitstopId} AND C.TripId = {TripId} AND C.PersonId = '{UserID}'", queryOptions);
             Pitstop pitstop = query.ToList().FirstOrDefault();
 
-            pitstop.Title = updatedPitstop.Title;
-            pitstop.Note = updatedPitstop.Note;
-            pitstop.PitstopDate = updatedPitstop.PitstopDate;
-            pitstop.Latitude = updatedPitstop.Latitude;
-            pitstop.Longitude = updatedPitstop.Longitude;
-            pitstop.Address = updatedPitstop.Address;
+            if (pitstop != null)
+            {
+                pitstop.Title = updatedPitstop.Title;
+                pitstop.Note = updatedPitstop.Note;
+                pitstop.PitstopDate = updatedPitstop.PitstopDate;
+                pitstop.Latitude = updatedPitstop.Latitude;
+                pitstop.Longitude = updatedPitstop.Longitude;
+                pitstop.Address = updatedPitstop.Address;
 
-            string documentId = pitstop.id;
+                string documentId = pitstop.id;
 
-            var documentUri = UriFactory.CreateDocumentUri(_dbName, _collectionNamePitstop, documentId);
+                var documentUri = UriFactory.CreateDocumentUri(_dbName, _collectionNamePitstop, documentId);
 
-            Document document = await _client.ReadDocumentAsync(documentUri);
+                Document document = await _client.ReadDocumentAsync(documentUri);
 
-            await _client.ReplaceDocumentAsync(document.SelfLink, pitstop);
+                await _client.ReplaceDocumentAsync(document.SelfLink, pitstop);
 
-            return Ok(document.Id);
+                return Ok(document.Id);
+            }
+            return NotFound();
         }
 
         /// <summary>
@@ -222,33 +235,35 @@ namespace JourneyNotesAPI.Controllers
         [HttpDelete("{TripId}/{PitstopId}")]
         public async Task<ActionResult<string>> DeletePitstop([FromRoute] int TripId, [FromRoute] int PitstopId)
         {
-            //var person = HttpContext.User;
-            var person = kovakoodattuKayttaja;
+            string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            //string UserID = "666";
 
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Pitstop> query = _client.CreateDocumentQuery<Pitstop>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop),
             //$"SELECT * FROM C WHERE C.PitstopId = {PitstopId} AND C.PersonId = {person}", queryOptions);
-            $"SELECT * FROM C where C.TripId = {TripId} AND C.PersonId = {person} AND C.PitstopId = {PitstopId}", queryOptions);
+            $"SELECT * FROM C where C.TripId = {TripId} AND C.PersonId = '{UserID}' AND C.PitstopId = {PitstopId}", queryOptions);
             var pitstop = query.ToList().FirstOrDefault();
 
-            string DbId = pitstop.id;
-
-            try
+            if (pitstop != null)
             {
-                await _client.DeleteDocumentAsync(
-                 UriFactory.CreateDocumentUri(_dbName, _collectionNamePitstop, DbId));
-                return Ok($"Deleted pitstop {PitstopId}");
-            }
-            catch (DocumentClientException de)
-            {
-                switch (de.StatusCode.Value)
+                try
                 {
-                    case System.Net.HttpStatusCode.NotFound:
-                        return NotFound();
+                    string DbId = pitstop.id;
+                    await _client.DeleteDocumentAsync(
+                     UriFactory.CreateDocumentUri(_dbName, _collectionNamePitstop, DbId));
+                    return Ok($"Deleted pitstop {PitstopId}");
+                }
+                catch (DocumentClientException de)
+                {
+                    switch (de.StatusCode.Value)
+                    {
+                        case System.Net.HttpStatusCode.NotFound:
+                            return NotFound();
+                    }
                 }
             }
-            return BadRequest();
+            return NotFound();
         }
 
         [NonAction]

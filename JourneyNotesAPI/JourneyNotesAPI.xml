@@ -4,21 +4,21 @@
         <name>JourneyNotesAPI</name>
     </assembly>
     <members>
-        <member name="M:JourneyNotesAPI.Controllers.PeopleController.GetPerson(System.Int32)">
+        <member name="M:JourneyNotesAPI.Controllers.PeopleController.GetPerson">
             <summary>
             Gets the customer details by CustomerID
             </summary>
             <param name="id"></param>
             <returns></returns>
         </member>
-        <member name="M:JourneyNotesAPI.Controllers.PeopleController.PostPerson(JourneyEntities.Person)">
+        <member name="M:JourneyNotesAPI.Controllers.PeopleController.PutPerson(JourneyEntities.NewPerson)">
             <summary>
             Adds a new person to the database
             </summary>
-            <param name="person"></param>
+            <param name="newperson"></param>
             <returns></returns>
         </member>
-        <member name="M:JourneyNotesAPI.Controllers.PitstopsController.PostPitstop(JourneyEntities.NewPitstop)">
+        <member name="M:JourneyNotesAPI.Controllers.PitstopsController.PostPitstop(System.Int32,JourneyEntities.NewPitstop)">
             <summary>
             Adds a new Pitstop under the user and the chosen Trip
             </summary>
@@ -42,23 +42,23 @@
             <param name="TripId"></param>
             <returns></returns>
         </member>
-        <member name="M:JourneyNotesAPI.Controllers.TripsController.GetTrips(System.String)">
+        <member name="M:JourneyNotesAPI.Controllers.TripsController.GetTrips">
             <summary>
-            Gets all the trips of the user by user id
+            Gets all the trips of the user by the users id (comes as authentication data)
             </summary>
             <param name="userID"></param>
             <returns></returns>
         </member>
         <member name="M:JourneyNotesAPI.Controllers.TripsController.GetTripAndPitstops(System.Int32)">
             <summary>
-            Gets the trip and the pitstops under it by trip id
+            Gets the trip and the pitstops under it with the trip id
             </summary>
             <param name="Id"></param>
             <returns></returns>
         </member>
         <member name="M:JourneyNotesAPI.Controllers.TripsController.PostNewTrip(JourneyEntities.NewTrip)">
             <summary>
-            Posts a new Trip under the user
+            Posts a new trip for a user (userid comes as authentication id)
             </summary>
             <param name="newTrip"></param>
             <returns></returns>
@@ -73,7 +73,8 @@
         </member>
         <member name="M:JourneyNotesAPI.Controllers.TripsController.DeleteTrip(System.Int32)">
             <summary>
-            Deletes a trip by trip id
+            Deletes a trip with the tripID and the pitstops related to that trip 
+            (user id from authentication data)
             </summary>
             <param name="id"></param>
             <returns></returns>
