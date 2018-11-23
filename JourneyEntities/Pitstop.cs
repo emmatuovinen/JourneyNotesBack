@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Http;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -10,7 +11,7 @@ namespace JourneyEntities
 
         public int PitstopId { get; set; }
 
-        public int PersonId { get; set; }
+        public string PersonId { get; set; }
 
         public string Title { get; set; }
 
@@ -43,12 +44,15 @@ namespace JourneyEntities
 
         public DateTime PitstopDate { get; set; }
 
-        public int TripId { get; set; }
-
         public int Latitude { get; set; }
 
         public int Longitude { get; set; }
 
         public string Address { get; set; }
+
+        public IFormFile picture { get; set; }
+
+        public int TripId { get; set; }
+
     }
 }

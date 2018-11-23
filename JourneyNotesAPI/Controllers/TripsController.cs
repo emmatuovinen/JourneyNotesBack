@@ -25,9 +25,6 @@ namespace JourneyNotesAPI.Controllers
     [ApiController]
     public class TripsController : ControllerBase
     {
-        // HUOM! MUISTA POISTAA TÄMÄ KOVAKOODATTU KÄYTTÄJÄ!!
-        int kovakoodattuKayttaja = 70;
-
         private readonly IConfiguration _configuration;
 
         // CosmosDB
@@ -72,26 +69,47 @@ namespace JourneyNotesAPI.Controllers
         }
 
         /// <summary>
-        /// Gets all the trips of the user by user id
+        /// Gets all the trips of the user by the users id (comes as authentication data)
         /// </summary>
         /// <param name="userID"></param>
         /// <returns></returns>
         // GET: api/Trips
-        [HttpGet, Authorize]
-        public ActionResult<IEnumerable<string>> GetTrips(string userID)
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<string>>> GetTrips()
         {
-          
-            // Remember to check the safety of this method!
+            string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            //string UserID = "666";
+            var triplist = new List<Trip>();
 
-            string userId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
-    
+            //Check if user exists
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
-            IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
-            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
-            $"SELECT * FROM C WHERE C.PersonId = {userID}", queryOptions);
-            var tripList = query.ToList();
+            IQueryable<Person> query = _client.CreateDocumentQuery<Person>(
+            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePerson),
+            $"SELECT * FROM C WHERE C.PersonId = '{UserID}'", queryOptions);
+            var userCount = query.ToList().Count();
 
-            return Ok(tripList);
+            if (userCount != 0)
+            {
+                FeedOptions queryOptions2 = new FeedOptions { MaxItemCount = -1 };
+                IQueryable<Trip> query2 = _client.CreateDocumentQuery<Trip>(
+                UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
+                $"SELECT * FROM C WHERE C.PersonId = '{UserID}' Order by C.StartDate", queryOptions2);
+                triplist = query2.ToList();
+                if (triplist == null)
+                    return Ok("[]");
+            }
+            else
+            {
+                //Add user to Person-Collection and return an empty triplist
+                Person person = new Person
+                {
+                    PersonId = UserID,
+                    Nickname = string.Empty,
+                    Avatar = string.Empty
+                };
+                Document document = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePerson), person);
+            }
+            return Ok(triplist);
         }
 
         // GET: api/Trips/5
@@ -109,7 +127,7 @@ namespace JourneyNotesAPI.Controllers
         //}
 
         /// <summary>
-        /// Gets the trip and the pitstops under it by trip id
+        /// Gets the trip and the pitstops under it with the trip id
         /// </summary>
         /// <param name="Id"></param>
         /// <returns></returns>
@@ -117,27 +135,31 @@ namespace JourneyNotesAPI.Controllers
         [HttpGet("{Id}", Name = "GetTripAndPitstops")]
         public ActionResult<string> GetTripAndPitstops(int Id)
         {
-            //var person = HttpContext.User;
-            var person = kovakoodattuKayttaja;
+            string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            //string UserID = "666";
 
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
-            $"SELECT * FROM T WHERE T.TripId = {Id} AND T.PersonId = {person}", queryOptions);
+            $"SELECT * FROM T WHERE T.TripId = {Id} AND T.PersonId = '{UserID}'", queryOptions);
             Trip tripDetails = query.ToList().FirstOrDefault();
+
+            if (tripDetails == null)
+                return NotFound();
 
             IQueryable<Pitstop> query2 = _client.CreateDocumentQuery<Pitstop>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop),
-            $"SELECT * FROM C WHERE C.TripId = {Id} AND C.PersonId = {person}", queryOptions);
+            $"SELECT * FROM C WHERE C.TripId = {Id} AND C.PersonId = '{UserID}' Order by C.PitstopDate", queryOptions);
             var pitstops = query2.ToList();
 
-            tripDetails.Pitstops = pitstops;
+            
+           tripDetails.Pitstops = pitstops;
 
             return Ok(tripDetails);
         }
 
         /// <summary>
-        /// Posts a new Trip under the user
+        /// Posts a new trip for a user (userid comes as authentication id)
         /// </summary>
         /// <param name="newTrip"></param>
         /// <returns></returns>
@@ -146,8 +168,13 @@ namespace JourneyNotesAPI.Controllers
         [Consumes("multipart/form-data")]
         public async Task<ActionResult<string>> PostNewTrip(NewTrip newTrip)
         {
+<<<<<<< HEAD
             //var person = HttpContext.User;
             var person = 45;
+=======
+            string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            //string UserID = "666";
+>>>>>>> master
 
             //if (!ModelState.IsValid)
             //{
@@ -163,7 +190,7 @@ namespace JourneyNotesAPI.Controllers
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
-            $"SELECT * FROM C WHERE C.PersonId = {person}", queryOptions);
+            $"SELECT * FROM C WHERE C.PersonId = '{UserID}'", queryOptions);
             var tripCount = query.ToList().Count;
 
             if (tripCount == 0)
@@ -172,12 +199,11 @@ namespace JourneyNotesAPI.Controllers
                 tripCount = query.ToList().Max(a => a.TripId);
 
             trip.TripId = tripCount + 1;
-            trip.PersonId = person;
+            trip.PersonId = UserID;
             trip.Headline = newTrip.Headline;
             trip.Description = newTrip.Description;
             trip.StartDate = newTrip.StartDate;
             trip.EndDate = newTrip.EndDate;
-
             trip.MainPhotoUrl = string.Empty;  // this needs to be updated! And the picture will be deleted at some point - we will not store huge pics.
             trip.MainPhotoSmallUrl = string.Empty;
 
@@ -210,35 +236,40 @@ namespace JourneyNotesAPI.Controllers
         [HttpPut("{id}")]
         public async Task<ActionResult<string>> PutTrip(int id, [FromBody] EditedTrip editedTrip)
         {
-            //var person = HttpContext.User;
-            var person = kovakoodattuKayttaja;
+            string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            //string UserID = "666";
 
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
-            $"SELECT * FROM C WHERE C.TripId = {id} AND C.PersonId = {person}", queryOptions);
+            $"SELECT * FROM C WHERE C.TripId = {id} AND C.PersonId = '{UserID}'", queryOptions);
             var trip = query.ToList().FirstOrDefault();
 
-            string documentId = trip.id;
+            if (trip != null)
+            {
+                string documentId = trip.id;
 
-            var documentUri = UriFactory.CreateDocumentUri(_dbName, _collectionNameTrip, documentId);
+                var documentUri = UriFactory.CreateDocumentUri(_dbName, _collectionNameTrip, documentId);
 
-            Document document = await _client.ReadDocumentAsync(documentUri);
+                Document document = await _client.ReadDocumentAsync(documentUri);
+                trip.PersonId = UserID;
+                trip.Headline = editedTrip.Headline;
+                trip.Description = editedTrip.Description;
+                trip.StartDate = editedTrip.StartDate;
+                trip.EndDate = editedTrip.EndDate;
+                trip.MainPhotoUrl = string.Empty;  // this needs to be updated! And the picture will be deleted at some point - we will not store huge pics.
+                trip.MainPhotoSmallUrl = string.Empty;
 
-            trip.Headline = editedTrip.Headline;
-            trip.Description = editedTrip.Description;
-            trip.StartDate = editedTrip.StartDate;
-            trip.EndDate = editedTrip.EndDate;
-            trip.MainPhotoUrl = string.Empty;  // this needs to be updated! And the picture will be deleted at some point - we will not store huge pics.
-            trip.MainPhotoSmallUrl = string.Empty;
+                await _client.ReplaceDocumentAsync(document.SelfLink, trip);
 
-            await _client.ReplaceDocumentAsync(document.SelfLink, trip);
-
-            return Ok(document.Id);
+                return Ok(document.Id);
+            }
+            return NotFound();
         }
 
         /// <summary>
-        /// Deletes a trip by trip id
+        /// Deletes a trip with the tripID and the pitstops related to that trip 
+        /// (user id from authentication data)
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
@@ -246,31 +277,61 @@ namespace JourneyNotesAPI.Controllers
         [HttpDelete("{id}")]
         public async Task<ActionResult<string>> DeleteTrip(int id)
         {
-            //var person = HttpContext.User;
-            var userID = kovakoodattuKayttaja;
+            string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            //string UserID = "666;
 
+            //get all pitstops for the trip to be deleted
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
-            IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
-            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
-            $"SELECT * FROM T WHERE T.TripId = {id} AND T.PersonId = {userID}", queryOptions);
-            var trip = query.ToList().FirstOrDefault();
+            IQueryable<Pitstop> query = _client.CreateDocumentQuery<Pitstop>(
+            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop),
+            $"SELECT * FROM C where C.TripId = {id} AND C.PersonId = '{UserID}'", queryOptions);
+            var pitstopList = query.ToList();
 
-            string DbId = trip.id;
+            foreach(var pitstop in pitstopList)
+            {
+                string documentId = pitstop.id;
 
-            try
-            {
-                await _client.DeleteDocumentAsync(UriFactory.CreateDocumentUri(_dbName, _collectionNameTrip, DbId));
-                return Ok($"Deleted trip {id}");
-            }
-            catch (DocumentClientException de)
-            {
-                switch (de.StatusCode.Value)
+                try
                 {
-                    case System.Net.HttpStatusCode.NotFound:
+                    await _client.DeleteDocumentAsync(
+                    UriFactory.CreateDocumentUri(_dbName, _collectionNamePitstop, documentId));
+
+                }
+                catch (DocumentClientException de)
+                {
+                    switch (de.StatusCode.Value)
+                    {
+                        case System.Net.HttpStatusCode.NotFound:
                         return NotFound();
+                    }
                 }
             }
-            return BadRequest();
+
+            FeedOptions queryOptions2 = new FeedOptions { MaxItemCount = -1 };
+            IQueryable<Trip> query2 = _client.CreateDocumentQuery<Trip>(
+            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
+            $"SELECT * FROM T WHERE T.TripId = {id} AND T.PersonId = '{UserID}'", queryOptions);
+            var trip = query2.ToList().FirstOrDefault();
+
+            if (trip != null)
+            {
+                try
+                {
+                    string TripDbId = trip.id;
+
+                    await _client.DeleteDocumentAsync(UriFactory.CreateDocumentUri(_dbName, _collectionNameTrip, TripDbId));
+                    return Ok($"Deleted trip {id} and all pitstops therein");
+                }
+                catch (DocumentClientException de)
+                {
+                    switch (de.StatusCode.Value)
+                    {
+                        case System.Net.HttpStatusCode.NotFound:
+                            return NotFound();
+                    }
+                }
+            }
+            return NotFound();
         }
 
         // NON ACTIONS
