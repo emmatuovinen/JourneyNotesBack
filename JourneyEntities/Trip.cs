@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Http;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -25,6 +26,8 @@ namespace JourneyEntities
         public List<Pitstop> Pitstops { get; set; }
 
         public string id { get; set; }
+
+        //public IFormFile picture { get; set; }
     }
 
     public class NewTrip
@@ -36,6 +39,8 @@ namespace JourneyEntities
         public DateTime StartDate { get; set; }
 
         public DateTime EndDate { get; set; }
+
+        public IFormFile picture { get; set; }
     }
 
     public class EditedTrip
