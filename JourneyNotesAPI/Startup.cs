@@ -80,8 +80,16 @@ namespace JourneyNotesAPI
                 });
             });
 
-            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+            // This needs to be here so that you can send pics
+            services.Configure<ApiBehaviorOptions>(options =>
+            {
+                options.SuppressConsumesConstraintForFormFileParameters = true;
+                options.SuppressInferBindingSourcesForParameters = true;
+                options.SuppressModelStateInvalidFilter = true;
+            });
 
+            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+            
             // Swagger:
             services.AddSwaggerGen(c =>
             {
@@ -91,7 +99,6 @@ namespace JourneyNotesAPI
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, "JourneyNotesAPI.xml");
                 c.IncludeXmlComments(xmlPath);
             });
-
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

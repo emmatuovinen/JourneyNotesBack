@@ -58,10 +58,9 @@
         </member>
         <member name="M:JourneyNotesAPI.Controllers.TripsController.PostNewTrip(JourneyEntities.NewTrip)">
             <summary>
-            Posts a new trip for a user
+            Posts a new Trip under the user
             </summary>
             <param name="newTrip"></param>
-            <param name="picture"></param>
             <returns></returns>
         </member>
         <member name="M:JourneyNotesAPI.Controllers.TripsController.PutTrip(System.Int32,JourneyEntities.EditedTrip)">

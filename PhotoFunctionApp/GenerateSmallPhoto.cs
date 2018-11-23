@@ -11,6 +11,7 @@ namespace PhotoFunctionApp
         public static async void Run([QueueTrigger("journeynotes", Connection = "queueConnection")]string myQueueItem, ILogger log, ExecutionContext context)
         {
             log.LogInformation($"Process small image: {myQueueItem}");
+            
         }
     }
 }

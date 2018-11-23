@@ -59,6 +59,10 @@ namespace JourneyNotesAPI.Controllers
             var accountName = _configuration["ConnectionStrings:StorageConnection:AccountName"];
             var accountKey = _configuration["ConnectionStrings:StorageConnection:AccountKey"];
             _storageAccount = new CloudStorageAccount(new StorageCredentials(accountName, accountKey), true);
+
+            _blobClient = _storageAccount.CreateCloudBlobClient();
+            _container = _blobClient.GetContainerReference(_containerName);
+
         }
 
         /// <summary>
@@ -150,23 +154,24 @@ namespace JourneyNotesAPI.Controllers
         /// Posts a new trip for a user (userid comes as authentication id)
         /// </summary>
         /// <param name="newTrip"></param>
-        /// <param name="picture"></param>
         /// <returns></returns>
         // POST: api/trips
         [HttpPost(Name = "PostNewTrip")]
-        public async Task<ActionResult> PostNewTrip([FromBody] NewTrip newTrip/*, IFormFile picture*/)
+        [Consumes("multipart/form-data")]
+        public async Task<ActionResult<string>> PostNewTrip(NewTrip newTrip)
         {
             //string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
             string UserID = "google-oauth2|117078475562561555790";
 
-            if (!ModelState.IsValid)
-            {
-                return BadRequest("Something wrong with the trip details.");
-            }
+            //if (!ModelState.IsValid)
+            //{
+            //    return BadRequest("Something wrong with the trip details.");
+            //}
 
             Trip trip = new Trip();
 
-            //string photoName = await StorePicture(picture);
+            //trip.picture = newTrip.picture;
+            string photoName = await StorePicture(newTrip.picture);
 
             // Determining the tripId number
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
@@ -190,9 +195,18 @@ namespace JourneyNotesAPI.Controllers
             trip.MainPhotoSmallUrl = string.Empty;
 
             Document document = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip), trip);
-            //await AddQueueItem(new QueueParam { Id = document.Id, PictureUri = "photoName" });
 
-            return Ok(document.Id);
+            try
+            {
+                await AddQueueItem(new QueueParam { Id = document.Id, PictureUri = photoName });
+            }
+            catch (Exception exept)
+            {
+                System.Diagnostics.Trace.WriteLine(exept.StackTrace);
+            }
+
+            //return Ok(document.Id);
+            return Ok($"Trip created, id: {trip.TripId}");
         }
 
         /// <summary>
@@ -303,16 +317,27 @@ namespace JourneyNotesAPI.Controllers
         private async Task<string> StorePicture(IFormFile file)
         {
             var ext = Path.GetExtension(file.FileName);
-            CloudBlockBlob blockBlob = _container.GetBlockBlobReference(Guid.NewGuid().ToString() + ext);
-            blockBlob.Metadata.Add("FileName", file.FileName);
-            if (file.Length > 0)
+
+            try
             {
-                using (var fileStream = file.OpenReadStream())
+                CloudBlockBlob blockBlob = _container.GetBlockBlobReference(Guid.NewGuid().ToString() + ext);
+                blockBlob.Metadata.Add("FileName", file.FileName);
+                if (file.Length > 0)
                 {
-                    await blockBlob.UploadFromStreamAsync(fileStream);
+                    using (var fileStream = file.OpenReadStream())
+                    {
+                        await blockBlob.UploadFromStreamAsync(fileStream);
+                    }
                 }
+                return blockBlob.Name;
+
             }
-            return blockBlob.Name;
+            catch (Exception e)
+            {
+                System.Diagnostics.Trace.WriteLine(e.StackTrace);
+                return null;
+            }
+
         }
 
         [NonAction]
