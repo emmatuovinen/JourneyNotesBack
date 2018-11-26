@@ -188,7 +188,7 @@ namespace JourneyNotesAPI.Controllers
         // DELETE: api/ApiWithActions/5
         //[HttpDelete("{TripId}", Name = "TripId")]
         [HttpDelete("{TripId}/{PitstopId}")]
-        public async Task<ActionResult<string>> DeletePitstop([FromRoute] int TripId, [FromRoute] int PitstopId)
+        public async Task<ActionResult<string>> DeletePitstop(int TripId, int PitstopId)
         {
             string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
             //string UserID = "666";
