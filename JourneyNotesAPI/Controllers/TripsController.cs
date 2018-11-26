@@ -167,7 +167,9 @@ namespace JourneyNotesAPI.Controllers
         [HttpPost(Name = "PostNewTrip")]
         [Consumes("multipart/form-data")]
         public async Task<ActionResult<string>> PostNewTrip(NewTrip newTrip)
-        { 
+        {   
+            
+     
             string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
             //string UserID = "666";
 
