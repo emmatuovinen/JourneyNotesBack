@@ -152,8 +152,8 @@ namespace JourneyNotesAPI.Controllers
             $"SELECT * FROM C WHERE C.TripId = {Id} AND C.PersonId = '{UserID}' Order by C.PitstopDate", queryOptions);
             var pitstops = query2.ToList();
 
-            
-           tripDetails.Pitstops = pitstops;
+
+            tripDetails.Pitstops = pitstops;
 
             return Ok(tripDetails);
         }
@@ -165,11 +165,9 @@ namespace JourneyNotesAPI.Controllers
         /// <returns></returns>
         // POST: api/trips
         [HttpPost(Name = "PostNewTrip")]
-        [Consumes("multipart/form-data")]
+        [Consumes("multipart/form-data"), Authorize]
         public async Task<ActionResult<string>> PostNewTrip(NewTrip newTrip)
-        {   
-            
-     
+        {
             string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
             //string UserID = "666";
 
@@ -180,7 +178,6 @@ namespace JourneyNotesAPI.Controllers
 
             Trip trip = new Trip();
 
-            //trip.picture = newTrip.picture;
             string photoName = await StorePicture(newTrip.picture);
 
             // Determining the tripId number
@@ -201,7 +198,7 @@ namespace JourneyNotesAPI.Controllers
             trip.Description = newTrip.Description;
             trip.StartDate = newTrip.StartDate;
             trip.EndDate = newTrip.EndDate;
-            trip.MainPhotoUrl = string.Empty;  // this needs to be updated! And the picture will be deleted at some point - we will not store huge pics.
+            trip.MainPhotoUrl = photoName;  // this needs to be updated! And the picture will be deleted at some point - we will not store huge pics.
             trip.MainPhotoSmallUrl = string.Empty;
 
             Document document = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip), trip);
@@ -284,7 +281,7 @@ namespace JourneyNotesAPI.Controllers
             $"SELECT * FROM C where C.TripId = {id} AND C.PersonId = '{UserID}'", queryOptions);
             var pitstopList = query.ToList();
 
-            foreach(var pitstop in pitstopList)
+            foreach (var pitstop in pitstopList)
             {
                 string documentId = pitstop.id;
 
@@ -299,7 +296,7 @@ namespace JourneyNotesAPI.Controllers
                     switch (de.StatusCode.Value)
                     {
                         case System.Net.HttpStatusCode.NotFound:
-                        return NotFound();
+                            return NotFound();
                     }
                 }
             }
@@ -339,26 +336,16 @@ namespace JourneyNotesAPI.Controllers
         {
             var ext = Path.GetExtension(file.FileName);
 
-            try
+            CloudBlockBlob blockBlob = _container.GetBlockBlobReference(Guid.NewGuid().ToString() + ext);
+            blockBlob.Metadata.Add("FileName", file.FileName);
+            if (file.Length > 0)
             {
-                CloudBlockBlob blockBlob = _container.GetBlockBlobReference(Guid.NewGuid().ToString() + ext);
-                blockBlob.Metadata.Add("FileName", file.FileName);
-                if (file.Length > 0)
+                using (var fileStream = file.OpenReadStream())
                 {
-                    using (var fileStream = file.OpenReadStream())
-                    {
-                        await blockBlob.UploadFromStreamAsync(fileStream);
-                    }
+                    await blockBlob.UploadFromStreamAsync(fileStream);
                 }
-                return blockBlob.Name;
-
             }
-            catch (Exception e)
-            {
-                System.Diagnostics.Trace.WriteLine(e.StackTrace);
-                return null;
-            }
-
+            return blockBlob.Name;
         }
 
         [NonAction]

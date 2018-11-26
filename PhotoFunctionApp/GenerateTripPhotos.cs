@@ -15,11 +15,12 @@ using SixLabors.ImageSharp.Processing;
 
 namespace PhotoFunctionApp
 {
-    public static class GenerateSmallPhoto
+    public static class GenerateTripPhotos
     {
-        const int SmallPhotoBiggerSize = 270;
+        const int SmallPhotoBiggerSide = 270;
+        const int BigPhotoBiggerSide = 800;
 
-        [FunctionName("GenerateSmallPhoto")]
+        [FunctionName("GenerateTripPhotos")]
         public static async void Run([QueueTrigger("journeynotes", Connection = "queueConnection")]string QueueItem, ILogger log, ExecutionContext context)
         {
             log.LogInformation($"Resizing image: {QueueItem}");
@@ -34,19 +35,20 @@ namespace PhotoFunctionApp
             string storageName = config["Storage"];
             string containerName = config["Container"];
 
-
             CloudBlobContainer container = GetBlobReference(storageName, containerName); // method below
 
-            // Resizing the image
+            // Resizing the images
             string smallImageName = await StoreImageAsync(item.PictureUri, container); // method below
+            string originalStorageImageName = await ReplaceBigStoreImageAsync(item.PictureUri, container); // method below
 
             // Updating the trip object in the db
-            await UpdateDocument(item.Id, smallImageName, config); // method below
+            await UpdateDocumentSmallImageUrl(item.Id, smallImageName, config); // method below
+            await UpdateDocumentBigImageUrl(item.Id, originalStorageImageName, config); // method below
 
-            log.LogInformation($"The image resized and saved, image name: {smallImageName}");
+            log.LogInformation($"The image resized and saved. Small image name: {smallImageName}, resized original image name: {originalStorageImageName}");
 
         }
-                
+
         private static CloudBlobContainer GetBlobReference(string storage, string containerName)
         {
             var storageAccount = CloudStorageAccount.Parse(storage);
@@ -76,18 +78,18 @@ namespace PhotoFunctionApp
                 // checking the ratio + the new size
                 if (originalImage.Width == originalImage.Height)
                 {
-                    originalImage.Mutate(x => x.Resize(SmallPhotoBiggerSize, SmallPhotoBiggerSize));
+                    originalImage.Mutate(x => x.Resize(SmallPhotoBiggerSide, SmallPhotoBiggerSide));
                 }
                 else if (originalImage.Width < originalImage.Height)
                 {
-                    var newHeight = SmallPhotoBiggerSize;
+                    var newHeight = SmallPhotoBiggerSide;
                     var newWidth = (newHeight * oldWidth) / oldHeight;
 
                     originalImage.Mutate(x => x.Resize(newWidth, newHeight));
                 }
                 else
                 {
-                    var newWidth = SmallPhotoBiggerSize;
+                    var newWidth = SmallPhotoBiggerSide;
                     var newHeight = (newWidth * oldHeight) / oldWidth;
 
                     originalImage.Mutate(x => x.Resize(newWidth, newHeight));
@@ -103,7 +105,57 @@ namespace PhotoFunctionApp
             return smallPictureBlob.Name;
         }
 
-        private static async Task UpdateDocument(string documentId, string smallImageUrl, IConfiguration conf)
+        private static async Task<string> ReplaceBigStoreImageAsync(string blobName, CloudBlobContainer container)
+        {
+            CloudBlockBlob pictureBlob = container.GetBlockBlobReference(blobName);
+            CloudBlockBlob newSizePictureBlob = container.GetBlockBlobReference(Guid.NewGuid().ToString() + ".jpeg");
+
+            // Adding some metadata (connect to the original image)
+            newSizePictureBlob.Metadata.Add("Type", "big");
+
+            // Image resizing
+            using (var imageStream = await pictureBlob.OpenReadAsync())
+            {
+                // Using SixLabors.ImageSharp library here
+                Image<Rgba32> originalImage = Image.Load(imageStream);
+
+                originalImage.Size();
+                var oldWidth = originalImage.Width;
+                var oldHeight = originalImage.Height;
+
+                // checking the ratio + the new size
+                if (originalImage.Width == originalImage.Height)
+                {
+                    originalImage.Mutate(x => x.Resize(BigPhotoBiggerSide, BigPhotoBiggerSide));
+                }
+                else if (originalImage.Width < originalImage.Height)
+                {
+                    var newHeight = BigPhotoBiggerSide;
+                    var newWidth = (newHeight * oldWidth) / oldHeight;
+
+                    originalImage.Mutate(x => x.Resize(newWidth, newHeight));
+                }
+                else
+                {
+                    var newWidth = BigPhotoBiggerSide;
+                    var newHeight = (newWidth * oldHeight) / oldWidth;
+
+                    originalImage.Mutate(x => x.Resize(newWidth, newHeight));
+                }
+
+                MemoryStream memoStream = new MemoryStream();
+                originalImage.SaveAsJpeg(memoStream);
+                memoStream.Position = 0;
+
+                await newSizePictureBlob.UploadFromStreamAsync(memoStream);
+            }
+
+            await pictureBlob.DeleteIfExistsAsync();
+
+            return newSizePictureBlob.Name;
+        }
+
+        private static async Task UpdateDocumentSmallImageUrl(string documentId, string smallImageUrl, IConfiguration conf)
         {
             var endpointUri = conf["CosmosEndpointUri"];
             var key = conf["CosmosPrimaryKey"];
@@ -117,6 +169,23 @@ namespace PhotoFunctionApp
             var documentUri = UriFactory.CreateDocumentUri(databaseName, collectionName, documentId);
             Trip trip = await documentClient.ReadDocumentAsync<Trip>(documentUri);
             trip.MainPhotoSmallUrl = smallImageUrl;
+            await documentClient.ReplaceDocumentAsync(documentUri, trip);
+        }
+
+        private static async Task UpdateDocumentBigImageUrl(string documentId, string bigImageUrl, IConfiguration conf)
+        {
+            var endpointUri = conf["CosmosEndpointUri"];
+            var key = conf["CosmosPrimaryKey"];
+            var databaseName = conf["CosmosDbName"];
+            var collectionName = conf["CosmosCollectionTrip"];
+
+            // using Microsoft.Azure.DocumentDB.Core library
+            DocumentClient documentClient = new DocumentClient(new Uri(endpointUri), key);
+
+            // Finding and updating the trip that needs to be updated with the new image:
+            var documentUri = UriFactory.CreateDocumentUri(databaseName, collectionName, documentId);
+            Trip trip = await documentClient.ReadDocumentAsync<Trip>(documentUri);
+            trip.MainPhotoUrl = bigImageUrl;
             await documentClient.ReplaceDocumentAsync(documentUri, trip);
         }
 
