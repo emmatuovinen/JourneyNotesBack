@@ -77,8 +77,8 @@ namespace JourneyNotesAPI.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<string>>> GetTrips()
         {
-            //string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
-            string UserID = "666";
+            string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            //string UserID = "666";
             var triplist = new List<Trip>();
 
             //Check if user exists
@@ -135,8 +135,8 @@ namespace JourneyNotesAPI.Controllers
         [HttpGet("{Id}", Name = "GetTripAndPitstops")]
         public ActionResult<string> GetTripAndPitstops(int Id)
         {
-            //string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
-            string UserID = "666";
+            string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            //string UserID = "666";
 
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
@@ -165,11 +165,11 @@ namespace JourneyNotesAPI.Controllers
         /// <returns></returns>
         // POST: api/trips
         [HttpPost(Name = "PostNewTrip")]
-        [Consumes("multipart/form-data")]
+        [Consumes("multipart/form-data"), Authorize]
         public async Task<ActionResult<string>> PostNewTrip(NewTrip newTrip)
         {
-            //string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
-            string UserID = "666";
+            string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            //string UserID = "666";
 
             //if (!ModelState.IsValid)
             //{
