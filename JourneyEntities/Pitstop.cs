@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Http;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -17,8 +18,6 @@ namespace JourneyEntities
         public string Note { get; set; }
 
         public DateTime PitstopDate { get; set; }
-
-        public string PhotoOriginalUrl { get; set; }
 
         public string PhotoLargeUrl { get; set; }
 
@@ -48,5 +47,10 @@ namespace JourneyEntities
         public int Longitude { get; set; }
 
         public string Address { get; set; }
+
+        public IFormFile picture { get; set; }
+
+        public int TripId { get; set; }
+
     }
 }

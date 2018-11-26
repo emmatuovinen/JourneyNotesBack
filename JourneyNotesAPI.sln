@@ -11,7 +11,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JourneyEntities", "JourneyE
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Test", "Test", "{19BB5750-8C67-45D0-9FE7-3EB6D3BF59FF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Auth0testit", "Auth0testit\Auth0testit.csproj", "{25ED755A-997D-463B-9961-D3DD6090830D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Auth0testit", "Auth0testit\Auth0testit.csproj", "{25ED755A-997D-463B-9961-D3DD6090830D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoFunctionAppForPitstops", "PhotoFunctionAppForPitstops\PhotoFunctionAppForPitstops.csproj", "{C3CB3C5B-E3B1-44C1-86CA-46C917D6B3C5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -35,6 +37,10 @@ Global
 		{25ED755A-997D-463B-9961-D3DD6090830D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{25ED755A-997D-463B-9961-D3DD6090830D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{25ED755A-997D-463B-9961-D3DD6090830D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C3CB3C5B-E3B1-44C1-86CA-46C917D6B3C5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C3CB3C5B-E3B1-44C1-86CA-46C917D6B3C5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C3CB3C5B-E3B1-44C1-86CA-46C917D6B3C5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C3CB3C5B-E3B1-44C1-86CA-46C917D6B3C5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

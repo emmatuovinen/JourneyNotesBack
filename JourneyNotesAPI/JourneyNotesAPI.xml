@@ -18,7 +18,7 @@
             <param name="newperson"></param>
             <returns></returns>
         </member>
-        <member name="M:JourneyNotesAPI.Controllers.PitstopsController.PostPitstop(System.Int32,JourneyEntities.NewPitstop)">
+        <member name="M:JourneyNotesAPI.Controllers.PitstopsController.PostPitstop(JourneyEntities.NewPitstop)">
             <summary>
             Adds a new Pitstop under the user and the chosen Trip
             </summary>
