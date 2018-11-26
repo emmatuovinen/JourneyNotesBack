@@ -109,13 +109,12 @@ namespace JourneyNotesAPI.Controllers
         {
             string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
             //string UserID = "666";
-            int tripId = 1;
 
             //Check if tripID exisists in Trips...
             FeedOptions queryOptionsT = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Pitstop> queryT = _client.CreateDocumentQuery<Pitstop>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
-            $"SELECT * FROM C WHERE C.TripId = {tripId} AND C.PersonId = '{UserID}'", queryOptionsT);
+            $"SELECT * FROM C WHERE C.TripId = {newPitstop.TripId} AND C.PersonId = '{UserID}'", queryOptionsT);
             var Trip = queryT.ToList().Count;
 
             string photoName = await StorePicture(newPitstop.picture);
@@ -127,7 +126,7 @@ namespace JourneyNotesAPI.Controllers
                 FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
                 IQueryable<Pitstop> query = _client.CreateDocumentQuery<Pitstop>(
                 UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop),
-                $"SELECT * FROM C WHERE C.TripId = {tripId} AND C.PersonId = '{UserID}'", queryOptions);
+                $"SELECT * FROM C WHERE C.TripId = {newPitstop.TripId} AND C.PersonId = '{UserID}'", queryOptions);
                 var pitstopCount = query.ToList().Count;
 
                 if (pitstopCount == 0)
@@ -143,7 +142,7 @@ namespace JourneyNotesAPI.Controllers
                 pitstop.PhotoLargeUrl = photoName; // will be replaced with the url to the resized image.
                 pitstop.PhotoMediumUrl = string.Empty; // will be updated when the image has been resized.
                 pitstop.PhotoSmallUrl = string.Empty; // will be updated when the image has been resized.
-                pitstop.TripId = tripId;
+                pitstop.TripId = newPitstop.TripId;
                 pitstop.Latitude = newPitstop.Latitude;
                 pitstop.Longitude = newPitstop.Longitude;
                 pitstop.Address = newPitstop.Address;
