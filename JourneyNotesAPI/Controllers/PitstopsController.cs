@@ -44,15 +44,20 @@ namespace JourneyNotesAPI.Controllers
         public PitstopsController(IConfiguration configuration)
         {
             _configuration = configuration;
+            var accountName = _configuration["ConnectionStrings:StorageConnection:AccountName"];
+            var accountKey = _configuration["ConnectionStrings:StorageConnection:AccountKey"];
+            _storageAccount = new CloudStorageAccount(new StorageCredentials(accountName, accountKey), true);
+
+            // CosmosDb
             var endpointUri = _configuration["ConnectionStrings:CosmosDbConnection:EndpointUri"];
             var key = _configuration["ConnectionStrings:CosmosDbConnection:PrimaryKey"];
             _client = new DocumentClient(new Uri(endpointUri), key);
 
             // Queue
-            var accountName = _configuration["ConnectionStrings:StorageConnection:AccountName"];
-            var accountKey = _configuration["ConnectionStrings:StorageConnection:AccountKey"];
-            _storageAccount = new CloudStorageAccount(new StorageCredentials(accountName, accountKey), true);
+            _queueClient = _storageAccount.CreateCloudQueueClient();
+            _messageQueue = _queueClient.GetQueueReference(_queueName);
 
+            // Blob
             _blobClient = _storageAccount.CreateCloudBlobClient();
             _container = _blobClient.GetContainerReference(_containerName);
 
@@ -100,8 +105,7 @@ namespace JourneyNotesAPI.Controllers
 
         [HttpPost("{TripId}")]
         [Consumes("multipart/form-data")]
-        public async Task<ActionResult<string>> PostPitstop (NewPitstop newPitstop)
-
+        public async Task<ActionResult<string>> PostPitstop(NewPitstop newPitstop)
         {
             string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
             //string UserID = "666";
@@ -118,7 +122,6 @@ namespace JourneyNotesAPI.Controllers
 
             if (Trip != 0)
             {
-
                 // We need to get the TripId from the http request!
                 Pitstop pitstop = new Pitstop();
                 FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
@@ -137,49 +140,22 @@ namespace JourneyNotesAPI.Controllers
                 pitstop.Title = newPitstop.Title;
                 pitstop.Note = newPitstop.Note;
                 pitstop.PitstopDate = newPitstop.PitstopDate;
-                pitstop.PhotoOriginalUrl = string.Empty; // Remember to update
-                pitstop.PhotoLargeUrl = string.Empty;
-                pitstop.PhotoMediumUrl = string.Empty;
-                pitstop.PhotoSmallUrl = string.Empty; // will be updated when the queue has done it's job.
+                pitstop.PhotoLargeUrl = photoName; // will be replaced with the url to the resized image.
+                pitstop.PhotoMediumUrl = string.Empty; // will be updated when the image has been resized.
+                pitstop.PhotoSmallUrl = string.Empty; // will be updated when the image has been resized.
                 pitstop.TripId = tripId;
                 pitstop.Latitude = newPitstop.Latitude;
                 pitstop.Longitude = newPitstop.Longitude;
                 pitstop.Address = newPitstop.Address;
 
-                // Updating the List<Pitstop> for the trip
-                //FeedOptions queryOptions2 = new FeedOptions { MaxItemCount = -1 };
-                //IQueryable<Trip> query2 = _client.CreateDocumentQuery<Trip>(
-                //UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
-                //$"SELECT * FROM T WHERE T.PersonId = {personId} AND T.TripId = {TripId}", queryOptions);
-                //var updateTrip = query2.ToList().FirstOrDefault();
-
-                //updateTrip.MainPhotoUrl = "test";
-                //updateTrip.Pitstops.Add(pitstop);
-                //string documentId = updateTrip.id;
-
-                //var documentUri = UriFactory.CreateDocumentUri(_dbName, _collectionNameTrip, documentId);
-                //Document documentTrip = await _client.ReadDocumentAsync(documentUri);
-
-                //await _client.ReplaceDocumentAsync(documentTrip.SelfLink, updateTrip);
-
                 Document documentPitstop = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop), pitstop);
-                //try
-                //{
-                //    await AddQueueItem(new QueueParam { Id = documentPitstop.Id, PictureUri = photoName });
-                //}
-                //catch (Exception exept)
-                //{
-                //    System.Diagnostics.Trace.WriteLine(exept.StackTrace);
-                //}
+
+                await AddQueueItem(new QueueParam { Id = documentPitstop.Id, PictureUri = photoName });
 
                 //return Ok(documentPitstop.Id);
-                return Ok($"Pitstop created, id: {documentPitstop.Id}");
-
+                return Ok($"Pitstop created under trip {pitstop.TripId}, id: {pitstop.PitstopId}");
             }
-
             return NotFound();
-
-
         }
 
         /// <summary>
@@ -296,10 +272,8 @@ namespace JourneyNotesAPI.Controllers
         [NonAction]
         private async Task AddQueueItem(QueueParam queueParam)
         {
-            {
-                CloudQueueMessage message = new CloudQueueMessage(queueParam.ToJson());
-                await _messageQueue.AddMessageAsync(message);
-            }
+            CloudQueueMessage message = new CloudQueueMessage(queueParam.ToJson());
+            await _messageQueue.AddMessageAsync(message);
         }
     }
 }

@@ -77,8 +77,8 @@ namespace JourneyNotesAPI.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<string>>> GetTrips()
         {
-            //string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
-            string UserID = "666";
+            string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            //string UserID = "666";
             var triplist = new List<Trip>();
 
             //Check if user exists
@@ -135,8 +135,8 @@ namespace JourneyNotesAPI.Controllers
         [HttpGet("{Id}", Name = "GetTripAndPitstops")]
         public ActionResult<string> GetTripAndPitstops(int Id)
         {
-            //string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
-            string UserID = "666";
+            string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            //string UserID = "666";
 
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
@@ -168,8 +168,8 @@ namespace JourneyNotesAPI.Controllers
         [Consumes("multipart/form-data")]
         public async Task<ActionResult<string>> PostNewTrip(NewTrip newTrip)
         {
-            //string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
-            string UserID = "666";
+            string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            //UserID = "666";
 
             //if (!ModelState.IsValid)
             //{
@@ -203,18 +203,11 @@ namespace JourneyNotesAPI.Controllers
 
             Document document = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip), trip);
 
-            try
-            {
-                QueueParam toQueue = new QueueParam();
-                toQueue.Id = document.Id;
-                toQueue.PictureUri = photoName;
+            QueueParam toQueue = new QueueParam();
+            toQueue.Id = document.Id;
+            toQueue.PictureUri = photoName;
 
-                await AddQueueItem(toQueue);
-            }
-            catch (Exception exept)
-            {
-                System.Diagnostics.Trace.WriteLine(exept.StackTrace);
-            }
+            await AddQueueItem(toQueue);
 
             //return Ok(document.Id);
             return Ok($"Trip created, id: {trip.TripId}");
@@ -351,16 +344,13 @@ namespace JourneyNotesAPI.Controllers
         [NonAction]
         private async Task AddQueueItem(QueueParam queueParam)
         {
-            try
-            {
-                CloudQueueMessage message = new CloudQueueMessage(queueParam.ToJson());
-                await _messageQueue.AddMessageAsync(message);
-            }
-            catch (Exception exe)
-            {
-                System.Diagnostics.Trace.WriteLine(exe.StackTrace);
+            CloudQueueMessage message = new CloudQueueMessage(queueParam.ToJson());
+            await _messageQueue.AddMessageAsync(message);
 
-            }
+            //catch (Exception exe)
+            //{
+            //    System.Diagnostics.Trace.WriteLine(exe.StackTrace);
+            //}
         }
 
     }
