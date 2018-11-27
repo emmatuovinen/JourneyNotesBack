@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
+using Newtonsoft.Json;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
@@ -22,7 +23,8 @@ namespace PitstopPhotosFunctionApp
         const int SmallPhotoBiggerSide = 270;
 
         [FunctionName("PitstopPhotosFunction")]
-        public static async void Run([QueueTrigger("pitstopqueue", Connection = "Connection")]string QueueItem, ILogger log, ExecutionContext context)
+        [StorageAccount("journeynotes")]
+        public static async Task Run([QueueTrigger("pitstopqueue", Connection = "Storage")]string QueueItem, ILogger log, ExecutionContext context)
         {
             log.LogInformation($"Resizing pitstop image: {QueueItem}");
             QueueParam item = QueueParam.FromJson(QueueItem);
@@ -33,9 +35,11 @@ namespace PitstopPhotosFunctionApp
                 .AddEnvironmentVariables()
                 .Build();
 
-            string storageName = config["Storage"];
-            string containerName = config["Container"];
+            string storageName = "DefaultEndpointsProtocol=https;AccountName=journeynotes;AccountKey=pvamopydIsCYuJtggV1UWMIw1Cr1N7iWXXF6qHoDIqXz3HkkQsJOSZQi68Ac3BZ8pOmYWl0r6Kc5r8t6fPlUpw==;EndpointSuffix=core.windows.net";
+            string containerName = "photos";
 
+            log.LogInformation($"StorageName is " + storageName + ", containerName is " + containerName);
+            
             CloudBlobContainer container = GetBlobReference(storageName, containerName); // method below
 
             // Resizing the image and naming the images
@@ -199,17 +203,17 @@ namespace PitstopPhotosFunctionApp
                 await newSizePictureBlob.UploadFromStreamAsync(memoStream);
             }
 
-            await pictureBlob.DeleteIfExistsAsync();
+            //await pictureBlob.DeleteIfExistsAsync();
 
             return newSizePictureBlob.Name;
         }
 
         private static async Task UpdateDocumentSmallImageUrl(string documentId, string smallImageUrl, IConfiguration conf)
         {
-            string endpointUri = conf["CosmosEndpointUri"];
-            string key = conf["CosmosPrimaryKey"];
-            string databaseName = conf["CosmosDbName"];
-            string collectionName = conf["CosmosCollectionPitstop"];
+            string endpointUri = "https://journeynotes.documents.azure.com:443/";
+            string key = "bcLnsRWQk4oDXP7NtCdqjRdCJL6hxh5PHdMzZ47Ph5EVv3CazHvPDPSDS0jd49DvdbpQfthtdC6BBb8f4u9i7w==";
+            string databaseName = "JourneyNotesDB";
+            string collectionName = "Pitstop";
 
             // using Microsoft.Azure.DocumentDB.Core library
             DocumentClient documentClient = new DocumentClient(new Uri(endpointUri), key);
@@ -223,10 +227,10 @@ namespace PitstopPhotosFunctionApp
 
         private static async Task UpdateDocumentMediumImageUrl(string documentId, string mediumImageUrl, IConfiguration conf)
         {
-            string endpointUri = conf["CosmosEndpointUri"];
-            string key = conf["CosmosPrimaryKey"];
-            string databaseName = conf["CosmosDbName"];
-            string collectionName = conf["CosmosCollectionPitstop"];
+            string endpointUri = "https://journeynotes.documents.azure.com:443/";
+            string key = "bcLnsRWQk4oDXP7NtCdqjRdCJL6hxh5PHdMzZ47Ph5EVv3CazHvPDPSDS0jd49DvdbpQfthtdC6BBb8f4u9i7w==";
+            string databaseName = "JourneyNotesDB";
+            string collectionName = "Pitstop";
 
             // using Microsoft.Azure.DocumentDB.Core library
             DocumentClient documentClient = new DocumentClient(new Uri(endpointUri), key);
@@ -240,10 +244,10 @@ namespace PitstopPhotosFunctionApp
 
         private static async Task UpdateDocumentLargeImageUrl(string documentId, string largeImageUrl, IConfiguration conf)
         {
-            string endpointUri = conf["CosmosEndpointUri"];
-            string key = conf["CosmosPrimaryKey"];
-            string databaseName = conf["CosmosDbName"];
-            string collectionName = conf["CosmosCollectionPitstop"];
+            string endpointUri = "https://journeynotes.documents.azure.com:443/";
+            string key = "bcLnsRWQk4oDXP7NtCdqjRdCJL6hxh5PHdMzZ47Ph5EVv3CazHvPDPSDS0jd49DvdbpQfthtdC6BBb8f4u9i7w==";
+            string databaseName = "JourneyNotesDB";
+            string collectionName = "Pitstop";
 
             // using Microsoft.Azure.DocumentDB.Core library
             DocumentClient documentClient = new DocumentClient(new Uri(endpointUri), key);
@@ -255,5 +259,47 @@ namespace PitstopPhotosFunctionApp
             await documentClient.ReplaceDocumentAsync(documentUri, pitstop);
         }
 
+    }
+
+    public class Trip
+    {
+        public int TripId { get; set; }
+
+        public string PersonId { get; set; }
+
+        public string Headline { get; set; }
+
+        public string Description { get; set; }
+
+        public DateTime StartDate { get; set; }
+
+        public DateTime EndDate { get; set; }
+
+        public string MainPhotoUrl { get; set; }
+
+        public string MainPhotoSmallUrl { get; set; }
+
+        //public List<Pitstop> Pitstops { get; set; }
+
+        public string id { get; set; }
+
+        //public IFormFile picture { get; set; }
+    }
+
+    public class QueueParam
+    {
+        public string Id { get; set; }
+
+        public string PictureUri { get; set; }
+
+        public string ToJson()
+        {
+            return JsonConvert.SerializeObject(this);
+        }
+
+        public static QueueParam FromJson(string json)
+        {
+            return JsonConvert.DeserializeObject<QueueParam>(json);
+        }
     }
 }

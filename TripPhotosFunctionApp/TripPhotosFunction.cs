@@ -21,7 +21,7 @@ namespace TripPhotosFunctionApp
         const int BigPhotoBiggerSide = 800;
 
         [FunctionName("TripPhotosFunction")]
-        public static async void RunAsync([QueueTrigger("tripqueue", Connection = "queueConnection")]string QueueItem, ILogger log, ExecutionContext context)
+        public static async Task RunAsync([QueueTrigger("tripqueue", Connection = "Storage")]string QueueItem, ILogger log, ExecutionContext context)
         {
             log.LogInformation($"Resizing image: {QueueItem}");
             QueueParam item = QueueParam.FromJson(QueueItem);
