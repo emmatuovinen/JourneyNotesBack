@@ -22,7 +22,7 @@ namespace PhotoFunctionAppForPitstops
         const int SmallPhotoBiggerSide = 270;
 
         [FunctionName("PitstopPhotos")]
-        public static async void ResizePitstopPhotosAsync([QueueTrigger("journeynotespitstops", Connection = "queueConnection")]string QueueItem, ILogger log, ExecutionContext context)
+        public static async void ResizePitstopPhotosAsync([QueueTrigger("journeynotespitstops", Connection = "Storage")]string QueueItem, ILogger log, ExecutionContext context)
         {
             log.LogInformation($"Resizing pitstop image: {QueueItem}");
             QueueParam item = QueueParam.FromJson(QueueItem);
