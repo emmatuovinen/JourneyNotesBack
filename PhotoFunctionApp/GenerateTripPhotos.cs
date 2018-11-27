@@ -13,15 +13,20 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
-namespace PhotoFunctionApp
+namespace TripPhotoFunctionApp
 {
     public static class GenerateTripPhotos
     {
         const int SmallPhotoBiggerSide = 270;
         const int BigPhotoBiggerSide = 800;
 
+        static GenerateTripPhotos()
+        {
+            string s = $"Starting--- (ctor)";
+        }
+
         [FunctionName("GenerateTripPhotos")]
-        public static async void Run([QueueTrigger("journeynotes", Connection = "queueConnection")]string QueueItem, ILogger log, ExecutionContext context)
+        public static async void Run([QueueTrigger("tripqueue", Connection = "Connection")]string QueueItem, ILogger log, ExecutionContext context)
         {
             log.LogInformation($"Resizing image: {QueueItem}");
             QueueParam item = QueueParam.FromJson(QueueItem);

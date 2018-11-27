@@ -34,7 +34,7 @@ namespace JourneyNotesAPI.Controllers
         private readonly CloudStorageAccount _storageAccount;
         private readonly CloudQueueClient _queueClient;
         private readonly CloudQueue _messageQueue;
-        private const string _queueName = "journeynotes";
+        private const string _queueName = "pitstopqueue";
 
         // Blob
         private readonly CloudBlobClient _blobClient;

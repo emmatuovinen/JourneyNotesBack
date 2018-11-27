@@ -13,15 +13,15 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
-namespace PhotoFunctionAppForPitstops
+namespace PitstopPhotosFunctionApp
 {
-    public static class GeneratePitstopPhotos
+    public static class PitstopPhotosFunction
     {
         const int LargePhotoBiggerSide = 800;
         const int MediumPhotoBiggerSide = 500;
         const int SmallPhotoBiggerSide = 270;
 
-        [FunctionName("PitstopPhotos")]
+        [FunctionName("PitstopPhotosFunction")]
         public static async void Run([QueueTrigger("pitstopqueue", Connection = "Connection")]string QueueItem, ILogger log, ExecutionContext context)
         {
             log.LogInformation($"Resizing pitstop image: {QueueItem}");
@@ -217,7 +217,7 @@ namespace PhotoFunctionAppForPitstops
             // Finding and updating the trip that needs to be updated with the new image:
             var documentUri = UriFactory.CreateDocumentUri(databaseName, collectionName, documentId);
             Pitstop pitstop = await documentClient.ReadDocumentAsync<Pitstop>(documentUri);
-            pitstop.PhotoSmallUrl = smallImageUrl;            
+            pitstop.PhotoSmallUrl = smallImageUrl;
             await documentClient.ReplaceDocumentAsync(documentUri, pitstop);
         }
 
