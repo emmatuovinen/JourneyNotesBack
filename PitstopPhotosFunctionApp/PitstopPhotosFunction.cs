@@ -18,9 +18,9 @@ namespace PitstopPhotosFunctionApp
 {
     public static class PitstopPhotosFunction
     {
-        const int LargePhotoBiggerSide = 800;
-        const int MediumPhotoBiggerSide = 500;
-        const int SmallPhotoBiggerSide = 270;
+        static int LargePhotoBiggerSide = 800;
+        static int MediumPhotoBiggerSide = 500;
+        static int SmallPhotoBiggerSide = 270;
 
         [FunctionName("PitstopPhotosFunction")]
         [StorageAccount("journeynotes")]
@@ -78,9 +78,14 @@ namespace PitstopPhotosFunctionApp
                 // Using SixLabors.ImageSharp library here
                 Image<Rgba32> originalImage = Image.Load(imageStream);
 
-                originalImage.Size();
                 var oldWidth = originalImage.Width;
                 var oldHeight = originalImage.Height;
+
+                // Making sure we do not make images bigger (=pixelated)
+                if (oldWidth < SmallPhotoBiggerSide)
+                    SmallPhotoBiggerSide = oldWidth;
+                else if (oldHeight < SmallPhotoBiggerSide)
+                    SmallPhotoBiggerSide = oldHeight;                  
 
                 // checking the ratio + the new size
                 if (originalImage.Width == originalImage.Height)
@@ -129,6 +134,12 @@ namespace PitstopPhotosFunctionApp
                 var oldWidth = originalImage.Width;
                 var oldHeight = originalImage.Height;
 
+                // Making sure we do not make images bigger (=pixelated)
+                if (oldWidth < MediumPhotoBiggerSide)
+                    MediumPhotoBiggerSide = oldWidth;
+                else if (oldHeight < MediumPhotoBiggerSide)
+                    MediumPhotoBiggerSide = oldHeight;
+
                 // checking the ratio + the new size
                 if (originalImage.Width == originalImage.Height)
                 {
@@ -172,9 +183,14 @@ namespace PitstopPhotosFunctionApp
                 // Using SixLabors.ImageSharp library here
                 Image<Rgba32> originalImage = Image.Load(imageStream);
 
-                originalImage.Size();
                 var oldWidth = originalImage.Width;
                 var oldHeight = originalImage.Height;
+
+                // Making sure we do not make images bigger (=pixelated)
+                if (oldWidth < LargePhotoBiggerSide)
+                    LargePhotoBiggerSide = oldWidth;
+                else if (oldHeight < LargePhotoBiggerSide)
+                    LargePhotoBiggerSide = oldHeight;
 
                 // checking the ratio + the new size
                 if (originalImage.Width == originalImage.Height)
@@ -203,7 +219,8 @@ namespace PitstopPhotosFunctionApp
                 await newSizePictureBlob.UploadFromStreamAsync(memoStream);
             }
 
-            //await pictureBlob.DeleteIfExistsAsync();
+            // Deleting the original image in case it is really big
+            await pictureBlob.DeleteIfExistsAsync();
 
             return newSizePictureBlob.Name;
         }

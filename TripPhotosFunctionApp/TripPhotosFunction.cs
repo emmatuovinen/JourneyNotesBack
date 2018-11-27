@@ -17,8 +17,8 @@ namespace TripPhotosFunctionApp
 {
     public static class TripPhotosFunction
     {
-        const int SmallPhotoBiggerSide = 270;
-        const int BigPhotoBiggerSide = 800;
+        static int SmallPhotoBiggerSide = 270;
+        static int BigPhotoBiggerSide = 800;
 
         [FunctionName("TripPhotosFunction")]
         public static async Task RunAsync([QueueTrigger("tripqueue", Connection = "Storage")]string QueueItem, ILogger log, ExecutionContext context)
@@ -75,6 +75,12 @@ namespace TripPhotosFunctionApp
                 var oldWidth = originalImage.Width;
                 var oldHeight = originalImage.Height;
 
+                // Making sure we do not make images bigger (=pixelated)
+                if (oldWidth < SmallPhotoBiggerSide)
+                    SmallPhotoBiggerSide = oldWidth;
+                else if (oldHeight < SmallPhotoBiggerSide)
+                    SmallPhotoBiggerSide = oldHeight;
+
                 // checking the ratio + the new size
                 if (originalImage.Width == originalImage.Height)
                 {
@@ -122,6 +128,12 @@ namespace TripPhotosFunctionApp
                 originalImage.Size();
                 var oldWidth = originalImage.Width;
                 var oldHeight = originalImage.Height;
+
+                // Making sure we do not make images bigger (=pixelated)
+                if (oldWidth < BigPhotoBiggerSide)
+                    BigPhotoBiggerSide = oldWidth;
+                else if (oldHeight < BigPhotoBiggerSide)
+                    BigPhotoBiggerSide = oldHeight;
 
                 // checking the ratio + the new size
                 if (originalImage.Width == originalImage.Height)
