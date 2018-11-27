@@ -229,7 +229,8 @@ namespace JourneyNotesAPI.Controllers
             IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
             $"SELECT * FROM C WHERE C.TripId = {id} AND C.PersonId = '{UserID}'", queryOptions);
-            var trip = query.ToList().FirstOrDefault();
+            var tripList = query.ToList();
+            var trip = tripList.FirstOrDefault();
 
             if (trip != null)
             {
