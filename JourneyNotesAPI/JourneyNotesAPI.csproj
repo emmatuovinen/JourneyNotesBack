@@ -27,7 +27,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\JourneyEntities\JourneyEntities.csproj" />
-    <ProjectReference Include="..\PhotoFunctionApp\PhotoFunctionApp.csproj" />
   </ItemGroup>
 
 </Project>
