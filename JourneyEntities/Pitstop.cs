@@ -27,9 +27,7 @@ namespace JourneyEntities
 
         public int TripId { get; set; }
 
-        public int Latitude { get; set; }
-
-        public int Longitude { get; set; }
+        public string pitstopPosition { get; set; }
 
         public string Address { get; set; }
     }
@@ -42,9 +40,7 @@ namespace JourneyEntities
 
         public DateTime PitstopDate { get; set; }
 
-        public int Latitude { get; set; }
-
-        public int Longitude { get; set; }
+        public string pitstopPosition { get; set; }
 
         public string Address { get; set; }
 

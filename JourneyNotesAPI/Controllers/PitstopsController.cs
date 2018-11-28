@@ -143,8 +143,7 @@ namespace JourneyNotesAPI.Controllers
                 pitstop.PhotoMediumUrl = string.Empty; // will be updated when the image has been resized.
                 pitstop.PhotoSmallUrl = string.Empty; // will be updated when the image has been resized.
                 pitstop.TripId = newPitstop.TripId;
-                pitstop.Latitude = newPitstop.Latitude;
-                pitstop.Longitude = newPitstop.Longitude;
+                pitstop.pitstopPosition = newPitstop.pitstopPosition;
                 pitstop.Address = newPitstop.Address;
 
                 Document documentPitstop = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop), pitstop);
@@ -182,8 +181,7 @@ namespace JourneyNotesAPI.Controllers
                 pitstop.Title = updatedPitstop.Title;
                 pitstop.Note = updatedPitstop.Note;
                 pitstop.PitstopDate = updatedPitstop.PitstopDate;
-                pitstop.Latitude = updatedPitstop.Latitude;
-                pitstop.Longitude = updatedPitstop.Longitude;
+                pitstop.pitstopPosition = updatedPitstop.pitstopPosition;
                 pitstop.Address = updatedPitstop.Address;
 
                 string documentId = pitstop.id;
@@ -208,7 +206,11 @@ namespace JourneyNotesAPI.Controllers
         // DELETE: api/ApiWithActions/5
         //[HttpDelete("{TripId}", Name = "TripId")]
         [HttpDelete("{TripId}/{PitstopId}")]
+<<<<<<< HEAD
         public async Task<ActionResult<string>> DeletePitstop(int TripId, int PitstopId)
+=======
+        public async Task<ActionResult<string>> DeletePitstop([FromRoute] int TripId, int PitstopId)
+>>>>>>> master
         {
             string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
             //string UserID = "666";

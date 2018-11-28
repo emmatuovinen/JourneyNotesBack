@@ -22,6 +22,7 @@ namespace JourneyEntities
         public string MainPhotoUrl { get; set; }
 
         public string MainPhotoSmallUrl { get; set; }
+        public string Position { get; set; }
 
         public List<Pitstop> Pitstops { get; set; }
 
@@ -40,6 +41,7 @@ namespace JourneyEntities
 
         public DateTime EndDate { get; set; }
 
+        public string Position { get; set; }
         public IFormFile picture { get; set; }
     }
 
@@ -55,6 +57,7 @@ namespace JourneyEntities
 
         public string MainPhotoUrl { get; set; }
 
+        public string Position { get; set; }
         public string MainPhotoSmallUrl { get; set; }
     }
 }
