@@ -3,6 +3,7 @@
 
 # Azure Functions localsettings file
 local.settings.json
+PitstopPhotosFunction
 
 # User-specific files
 *.suo
