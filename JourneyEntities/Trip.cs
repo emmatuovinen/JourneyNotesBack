@@ -27,6 +27,7 @@ namespace JourneyEntities
 
         public string id { get; set; }
 
+        public string position { get; set; }
         //public IFormFile picture { get; set; }
     }
 
@@ -41,6 +42,7 @@ namespace JourneyEntities
         public DateTime EndDate { get; set; }
 
         public IFormFile picture { get; set; }
+        public string position { get; set; }
     }
 
     public class EditedTrip
@@ -56,5 +58,6 @@ namespace JourneyEntities
         public string MainPhotoUrl { get; set; }
 
         public string MainPhotoSmallUrl { get; set; }
+        public string position { get; set; }
     }
 }
