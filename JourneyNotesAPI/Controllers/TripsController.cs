@@ -309,6 +309,11 @@ namespace JourneyNotesAPI.Controllers
                     string TripDbId = trip.id;
 
                     await _client.DeleteDocumentAsync(UriFactory.CreateDocumentUri(_dbName, _collectionNameTrip, TripDbId));
+                    
+                    // Removing images from the blob storage
+                    var smallImage = trip.MainPhotoSmallUrl;
+                    string removed = await RemoveSmallImageFromBlob(trip, _container);
+
                     return Ok($"Deleted trip {id} and all pitstops therein");
                 }
                 catch (DocumentClientException de)
@@ -320,7 +325,27 @@ namespace JourneyNotesAPI.Controllers
                     }
                 }
             }
+
+
+
             return NotFound();
+        }
+
+
+        private static async Task<string> RemoveSmallImageFromBlob(Trip trip, CloudBlobContainer container)
+        {
+            string smallImageName = trip.MainPhotoSmallUrl;
+            string largeImageName = trip.MainPhotoUrl;
+            CloudBlockBlob smallImage = container.GetBlockBlobReference(smallImageName);
+            CloudBlockBlob largeImage = container.GetBlockBlobReference(largeImageName);
+
+            using (var deleteStream = await smallImage.OpenReadAsync()) { }
+                await smallImage.DeleteIfExistsAsync();
+
+            using (var deleteStream = await largeImage.OpenReadAsync()) { }
+            await largeImage.DeleteIfExistsAsync();
+
+            return $"Deleted images {smallImageName} and {largeImageName}";
         }
 
         // NON ACTIONS
