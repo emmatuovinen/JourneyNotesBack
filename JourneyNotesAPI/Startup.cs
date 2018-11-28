@@ -124,7 +124,7 @@ namespace JourneyNotesAPI
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "JourneyNotes API");
             });
 
-            app.UseCors();
+            app.UseCors("MyPolicy");
             //Auth0
             app.UseAuthentication();
 
