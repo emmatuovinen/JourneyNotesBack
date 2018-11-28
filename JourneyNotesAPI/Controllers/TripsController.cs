@@ -285,6 +285,8 @@ namespace JourneyNotesAPI.Controllers
                     await _client.DeleteDocumentAsync(
                     UriFactory.CreateDocumentUri(_dbName, _collectionNamePitstop, documentId));
 
+                    // Removing images from the blob storage
+                    string removed = await RemovePitstopImagesFromBlob(pitstop, _container);
                 }
                 catch (DocumentClientException de)
                 {
@@ -311,8 +313,7 @@ namespace JourneyNotesAPI.Controllers
                     await _client.DeleteDocumentAsync(UriFactory.CreateDocumentUri(_dbName, _collectionNameTrip, TripDbId));
                     
                     // Removing images from the blob storage
-                    var smallImage = trip.MainPhotoSmallUrl;
-                    string removed = await RemoveSmallImageFromBlob(trip, _container);
+                    string removed = await RemoveTripImagesFromBlob(trip, _container);
 
                     return Ok($"Deleted trip {id} and all pitstops therein");
                 }
@@ -325,14 +326,14 @@ namespace JourneyNotesAPI.Controllers
                     }
                 }
             }
-
-
-
             return NotFound();
         }
 
 
-        private static async Task<string> RemoveSmallImageFromBlob(Trip trip, CloudBlobContainer container)
+        // NON ACTIONS
+        // ------------------------------------------------------------
+
+        private static async Task<string> RemoveTripImagesFromBlob(Trip trip, CloudBlobContainer container)
         {
             string smallImageName = trip.MainPhotoSmallUrl;
             string largeImageName = trip.MainPhotoUrl;
@@ -348,8 +349,27 @@ namespace JourneyNotesAPI.Controllers
             return $"Deleted images {smallImageName} and {largeImageName}";
         }
 
-        // NON ACTIONS
-        // ------------------------------------------------------------
+        private static async Task<string> RemovePitstopImagesFromBlob(Pitstop pitstop, CloudBlobContainer container)
+        {
+            string smallImageName = pitstop.PhotoSmallUrl;
+            string mediumImageName = pitstop.PhotoMediumUrl;
+            string largeImageName = pitstop.PhotoLargeUrl;
+
+            CloudBlockBlob smallImage = container.GetBlockBlobReference(smallImageName);
+            CloudBlockBlob mediumImage = container.GetBlockBlobReference(mediumImageName);
+            CloudBlockBlob largeImage = container.GetBlockBlobReference(largeImageName);
+
+            using (var deleteStream = await smallImage.OpenReadAsync()) { }
+            await smallImage.DeleteIfExistsAsync();
+
+            using (var deleteStream = await mediumImage.OpenReadAsync()) { }
+            await mediumImage.DeleteIfExistsAsync();
+
+            using (var deleteStream = await largeImage.OpenReadAsync()) { }
+            await largeImage.DeleteIfExistsAsync();
+
+            return $"Deleted images {smallImageName}, {mediumImageName} and {largeImageName}";
+        }
 
         [NonAction]
         private async Task<string> StorePicture(IFormFile file)
