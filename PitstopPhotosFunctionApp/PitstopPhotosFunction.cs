@@ -29,17 +29,9 @@ namespace PitstopPhotosFunctionApp
             log.LogInformation($"Resizing pitstop image: {QueueItem}");
             QueueParam item = QueueParam.FromJson(QueueItem);
 
-            var config = new ConfigurationBuilder()
-                .SetBasePath(context.FunctionAppDirectory)
-                .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
-                .AddEnvironmentVariables()
-                .Build();
-
-            string storageName = "DefaultEndpointsProtocol=https;AccountName=journeynotes;AccountKey=pvamopydIsCYuJtggV1UWMIw1Cr1N7iWXXF6qHoDIqXz3HkkQsJOSZQi68Ac3BZ8pOmYWl0r6Kc5r8t6fPlUpw==;EndpointSuffix=core.windows.net";
+            string storageName = "DefaultEndpointsProtocol=https;AccountName=journeynotes;AccountKey=1jxEaxOXJyzg6rfX7WcQ5BOqspV+AQuiMJb8QaHyaG7lH57+09QYsV4fTKSR5kX+E80+eILrcdfD76SwtL7png==;EndpointSuffix=core.windows.net";
             string containerName = "photos";
 
-            log.LogInformation($"StorageName is " + storageName + ", containerName is " + containerName);
-            
             CloudBlobContainer container = GetBlobReference(storageName, containerName); // method below
 
             // Resizing the image and naming the images
@@ -48,9 +40,9 @@ namespace PitstopPhotosFunctionApp
             string originalStorageImageName = await ReplaceLargeStoreImageAsync(item.PictureUri, container); // method below
 
             // Updating the trip object in the db
-            await UpdateDocumentSmallImageUrl(item.Id, smallImageName, config); // method below
-            await UpdateDocumentMediumImageUrl(item.Id, mediumStorageImageName, config); // method below
-            await UpdateDocumentLargeImageUrl(item.Id, originalStorageImageName, config); // method below
+            await UpdateDocumentSmallImageUrl(item.Id, smallImageName); // method below
+            await UpdateDocumentMediumImageUrl(item.Id, mediumStorageImageName); // method below
+            await UpdateDocumentLargeImageUrl(item.Id, originalStorageImageName); // method below
 
             log.LogInformation($"The image resized and saved. Small image name: {smallImageName}, medium image name: {mediumStorageImageName}, large image name: {originalStorageImageName}");
 
@@ -81,30 +73,28 @@ namespace PitstopPhotosFunctionApp
                 var oldWidth = originalImage.Width;
                 var oldHeight = originalImage.Height;
 
-                // Making sure we do not make images bigger (=pixelated)
-                if (oldWidth < SmallPhotoBiggerSide)
-                    SmallPhotoBiggerSide = oldWidth;
-                else if (oldHeight < SmallPhotoBiggerSide)
-                    SmallPhotoBiggerSide = oldHeight;                  
 
-                // checking the ratio + the new size
-                if (originalImage.Width == originalImage.Height)
+                if ((oldWidth > SmallPhotoBiggerSide) || (oldHeight > SmallPhotoBiggerSide))
                 {
-                    originalImage.Mutate(x => x.Resize(SmallPhotoBiggerSide, SmallPhotoBiggerSide));
-                }
-                else if (originalImage.Width < originalImage.Height)
-                {
-                    var newHeight = SmallPhotoBiggerSide;
-                    var newWidth = (newHeight * oldWidth) / oldHeight;
+                    // checking the ratio + the new size
+                    if (originalImage.Width == originalImage.Height)
+                    {
+                        originalImage.Mutate(x => x.Resize(SmallPhotoBiggerSide, SmallPhotoBiggerSide));
+                    }
+                    else if (originalImage.Width < originalImage.Height)
+                    {
+                        var newHeight = SmallPhotoBiggerSide;
+                        var newWidth = (newHeight * oldWidth) / oldHeight;
 
-                    originalImage.Mutate(x => x.Resize(newWidth, newHeight));
-                }
-                else
-                {
-                    var newWidth = SmallPhotoBiggerSide;
-                    var newHeight = (newWidth * oldHeight) / oldWidth;
+                        originalImage.Mutate(x => x.Resize(newWidth, newHeight));
+                    }
+                    else
+                    {
+                        var newWidth = SmallPhotoBiggerSide;
+                        var newHeight = (newWidth * oldHeight) / oldWidth;
 
-                    originalImage.Mutate(x => x.Resize(newWidth, newHeight));
+                        originalImage.Mutate(x => x.Resize(newWidth, newHeight));
+                    }
                 }
 
                 MemoryStream memoStream = new MemoryStream();
@@ -124,6 +114,7 @@ namespace PitstopPhotosFunctionApp
             // Adding some metadata (connect to the original image)
             mediumPictureBlob.Metadata.Add("Type", "medium");
 
+
             // Image resizing
             using (var imageStream = await pictureBlob.OpenReadAsync())
             {
@@ -133,31 +124,28 @@ namespace PitstopPhotosFunctionApp
                 originalImage.Size();
                 var oldWidth = originalImage.Width;
                 var oldHeight = originalImage.Height;
-
-                // Making sure we do not make images bigger (=pixelated)
-                if (oldWidth < MediumPhotoBiggerSide)
-                    MediumPhotoBiggerSide = oldWidth;
-                else if (oldHeight < MediumPhotoBiggerSide)
-                    MediumPhotoBiggerSide = oldHeight;
-
-                // checking the ratio + the new size
-                if (originalImage.Width == originalImage.Height)
+                
+                if ((oldWidth > MediumPhotoBiggerSide) || (oldHeight > MediumPhotoBiggerSide))
                 {
-                    originalImage.Mutate(x => x.Resize(MediumPhotoBiggerSide, MediumPhotoBiggerSide));
-                }
-                else if (originalImage.Width < originalImage.Height)
-                {
-                    var newHeight = MediumPhotoBiggerSide;
-                    var newWidth = (newHeight * oldWidth) / oldHeight;
+                    // checking the ratio + the new size
+                    if (originalImage.Width == originalImage.Height)
+                    {
+                        originalImage.Mutate(x => x.Resize(MediumPhotoBiggerSide, MediumPhotoBiggerSide));
+                    }
+                    else if (originalImage.Width < originalImage.Height)
+                    {
+                        var newHeight = MediumPhotoBiggerSide;
+                        var newWidth = (newHeight * oldWidth) / oldHeight;
 
-                    originalImage.Mutate(x => x.Resize(newWidth, newHeight));
-                }
-                else
-                {
-                    var newWidth = MediumPhotoBiggerSide;
-                    var newHeight = (newWidth * oldHeight) / oldWidth;
+                        originalImage.Mutate(x => x.Resize(newWidth, newHeight));
+                    }
+                    else
+                    {
+                        var newWidth = MediumPhotoBiggerSide;
+                        var newHeight = (newWidth * oldHeight) / oldWidth;
 
-                    originalImage.Mutate(x => x.Resize(newWidth, newHeight));
+                        originalImage.Mutate(x => x.Resize(newWidth, newHeight));
+                    }
                 }
 
                 MemoryStream memoStream = new MemoryStream();
@@ -186,30 +174,27 @@ namespace PitstopPhotosFunctionApp
                 var oldWidth = originalImage.Width;
                 var oldHeight = originalImage.Height;
 
-                // Making sure we do not make images bigger (=pixelated)
-                if (oldWidth < LargePhotoBiggerSide)
-                    LargePhotoBiggerSide = oldWidth;
-                else if (oldHeight < LargePhotoBiggerSide)
-                    LargePhotoBiggerSide = oldHeight;
-
-                // checking the ratio + the new size
-                if (originalImage.Width == originalImage.Height)
+                if ((oldWidth > LargePhotoBiggerSide) || (oldHeight > LargePhotoBiggerSide))
                 {
-                    originalImage.Mutate(x => x.Resize(LargePhotoBiggerSide, LargePhotoBiggerSide));
-                }
-                else if (originalImage.Width < originalImage.Height)
-                {
-                    var newHeight = LargePhotoBiggerSide;
-                    var newWidth = (newHeight * oldWidth) / oldHeight;
+                    // checking the ratio + the new size
+                    if (originalImage.Width == originalImage.Height)
+                    {
+                        originalImage.Mutate(x => x.Resize(LargePhotoBiggerSide, LargePhotoBiggerSide));
+                    }
+                    else if (originalImage.Width < originalImage.Height)
+                    {
+                        var newHeight = LargePhotoBiggerSide;
+                        var newWidth = (newHeight * oldWidth) / oldHeight;
 
-                    originalImage.Mutate(x => x.Resize(newWidth, newHeight));
-                }
-                else
-                {
-                    var newWidth = LargePhotoBiggerSide;
-                    var newHeight = (newWidth * oldHeight) / oldWidth;
+                        originalImage.Mutate(x => x.Resize(newWidth, newHeight));
+                    }
+                    else
+                    {
+                        var newWidth = LargePhotoBiggerSide;
+                        var newHeight = (newWidth * oldHeight) / oldWidth;
 
-                    originalImage.Mutate(x => x.Resize(newWidth, newHeight));
+                        originalImage.Mutate(x => x.Resize(newWidth, newHeight));
+                    }
                 }
 
                 MemoryStream memoStream = new MemoryStream();
@@ -225,10 +210,10 @@ namespace PitstopPhotosFunctionApp
             return newSizePictureBlob.Name;
         }
 
-        private static async Task UpdateDocumentSmallImageUrl(string documentId, string smallImageUrl, IConfiguration conf)
+        private static async Task UpdateDocumentSmallImageUrl(string documentId, string smallImageUrl)
         {
             string endpointUri = "https://journeynotes.documents.azure.com:443/";
-            string key = "bcLnsRWQk4oDXP7NtCdqjRdCJL6hxh5PHdMzZ47Ph5EVv3CazHvPDPSDS0jd49DvdbpQfthtdC6BBb8f4u9i7w==";
+            string key = "8xVQC2IvcmhQE9x1pj9g11h8LfNmX4YiBwHw4wnXG4Ww2qcDMl16AzsJKC503JpB4zLiTI4UBTHVhZTAkxocOg==";
             string databaseName = "JourneyNotesDB";
             string collectionName = "Pitstop";
 
@@ -242,10 +227,10 @@ namespace PitstopPhotosFunctionApp
             await documentClient.ReplaceDocumentAsync(documentUri, pitstop);
         }
 
-        private static async Task UpdateDocumentMediumImageUrl(string documentId, string mediumImageUrl, IConfiguration conf)
+        private static async Task UpdateDocumentMediumImageUrl(string documentId, string mediumImageUrl)
         {
             string endpointUri = "https://journeynotes.documents.azure.com:443/";
-            string key = "bcLnsRWQk4oDXP7NtCdqjRdCJL6hxh5PHdMzZ47Ph5EVv3CazHvPDPSDS0jd49DvdbpQfthtdC6BBb8f4u9i7w==";
+            string key = "8xVQC2IvcmhQE9x1pj9g11h8LfNmX4YiBwHw4wnXG4Ww2qcDMl16AzsJKC503JpB4zLiTI4UBTHVhZTAkxocOg==";
             string databaseName = "JourneyNotesDB";
             string collectionName = "Pitstop";
 
@@ -259,10 +244,10 @@ namespace PitstopPhotosFunctionApp
             await documentClient.ReplaceDocumentAsync(documentUri, pitstop);
         }
 
-        private static async Task UpdateDocumentLargeImageUrl(string documentId, string largeImageUrl, IConfiguration conf)
+        private static async Task UpdateDocumentLargeImageUrl(string documentId, string largeImageUrl)
         {
             string endpointUri = "https://journeynotes.documents.azure.com:443/";
-            string key = "bcLnsRWQk4oDXP7NtCdqjRdCJL6hxh5PHdMzZ47Ph5EVv3CazHvPDPSDS0jd49DvdbpQfthtdC6BBb8f4u9i7w==";
+            string key = "8xVQC2IvcmhQE9x1pj9g11h8LfNmX4YiBwHw4wnXG4Ww2qcDMl16AzsJKC503JpB4zLiTI4UBTHVhZTAkxocOg==";
             string databaseName = "JourneyNotesDB";
             string collectionName = "Pitstop";
 
