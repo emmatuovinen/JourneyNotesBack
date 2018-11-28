@@ -22,6 +22,7 @@ namespace JourneyEntities
         public string MainPhotoUrl { get; set; }
 
         public string MainPhotoSmallUrl { get; set; }
+
         public string Position { get; set; }
 
         public List<Pitstop> Pitstops { get; set; }
@@ -58,6 +59,7 @@ namespace JourneyEntities
         public string MainPhotoUrl { get; set; }
 
         public string Position { get; set; }
+
         public string MainPhotoSmallUrl { get; set; }
     }
 }

@@ -206,7 +206,6 @@ namespace TripPhotosFunctionApp
             return JsonConvert.DeserializeObject<QueueParam>(json);
         }
     }
-
     public class Trip
     {
         public int TripId { get; set; }
@@ -224,6 +223,8 @@ namespace TripPhotosFunctionApp
         public string MainPhotoUrl { get; set; }
 
         public string MainPhotoSmallUrl { get; set; }
+
+        public string Position { get; set; }
 
         public string id { get; set; }
 

@@ -281,7 +281,7 @@ namespace PitstopPhotosFunctionApp
 
         public string MainPhotoSmallUrl { get; set; }
 
-        //public List<Pitstop> Pitstops { get; set; }
+        public string Position { get; set; }
 
         public string id { get; set; }
 
