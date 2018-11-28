@@ -93,7 +93,7 @@ namespace JourneyNotesAPI.Controllers
                 FeedOptions queryOptions2 = new FeedOptions { MaxItemCount = -1 };
                 IQueryable<Trip> query2 = _client.CreateDocumentQuery<Trip>(
                 UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
-                $"SELECT * FROM C WHERE C.PersonId = '{UserID}' Order by C.StartDate", queryOptions2);
+                $"SELECT * FROM C WHERE C.PersonId = '{UserID}' Order by C.StartDate Desc", queryOptions2);
                 triplist = query2.ToList();
                 if (triplist == null)
                     return Ok("[]");
@@ -149,7 +149,7 @@ namespace JourneyNotesAPI.Controllers
 
             IQueryable<Pitstop> query2 = _client.CreateDocumentQuery<Pitstop>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop),
-            $"SELECT * FROM C WHERE C.TripId = {Id} AND C.PersonId = '{UserID}' Order by C.PitstopDate", queryOptions);
+            $"SELECT * FROM C WHERE C.TripId = {Id} AND C.PersonId = '{UserID}' Order by C.PitstopDate Desc", queryOptions);
             var pitstops = query2.ToList();
 
 
@@ -230,7 +230,8 @@ namespace JourneyNotesAPI.Controllers
             IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
             $"SELECT * FROM C WHERE C.TripId = {id} AND C.PersonId = '{UserID}'", queryOptions);
-            var trip = query.ToList().FirstOrDefault();
+            var tripList = query.ToList();
+            var trip = tripList.FirstOrDefault();
 
             if (trip != null)
             {
