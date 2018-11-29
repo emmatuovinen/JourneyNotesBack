@@ -1,0 +1,19 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "DefaultEndpointsProtocol=https;AccountName=journeynotes;AccountKey=1jxEaxOXJyzg6rfX7WcQ5BOqspV+AQuiMJb8QaHyaG7lH57+09QYsV4fTKSR5kX+E80+eILrcdfD76SwtL7png==;BlobEndpoint=https://journeynotes.blob.core.windows.net/;TableEndpoint=https://journeynotes.table.core.windows.net/;QueueEndpoint=https://journeynotes.queue.core.windows.net/;FileEndpoint=https://journeynotes.file.core.windows.net/",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet",
+    "Storage": "DefaultEndpointsProtocol=https;AccountName=journeynotes;AccountKey=1jxEaxOXJyzg6rfX7WcQ5BOqspV+AQuiMJb8QaHyaG7lH57+09QYsV4fTKSR5kX+E80+eILrcdfD76SwtL7png==;EndpointSuffix=core.windows.net"
+  },
+  "ConnectionStrings": {
+    "queueConnection": "DefaultEndpointsProtocol=https;AccountName=journeynotes;AccountKey=1jxEaxOXJyzg6rfX7WcQ5BOqspV+AQuiMJb8QaHyaG7lH57+09QYsV4fTKSR5kX+E80+eILrcdfD76SwtL7png==;EndpointSuffix=core.windows.net"
+  },
+  "Container": "photos",
+  "ContainerName": "photos",
+  "CosmosEndpointUri": "https://journeynotes.documents.azure.com:443/",
+  "CosmosPrimaryKey": "8xVQC2IvcmhQE9x1pj9g11h8LfNmX4YiBwHw4wnXG4Ww2qcDMl16AzsJKC503JpB4zLiTI4UBTHVhZTAkxocOg==",
+  "CosmosCollectionPerson": "Person",
+  "CosmosCollectionTrip": "Trip",
+  "CosmosCollectionPitstop": "Pitstop",
+  "CosmosDbName": "JourneyNotesDB"
+}

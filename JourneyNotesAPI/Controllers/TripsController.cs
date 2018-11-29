@@ -267,7 +267,7 @@ namespace JourneyNotesAPI.Controllers
         public async Task<ActionResult<string>> DeleteTrip(int id)
         {
             string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
-            //string UserID = "666;
+            //string UserID = "666";
 
             //get all pitstops for the trip to be deleted
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };

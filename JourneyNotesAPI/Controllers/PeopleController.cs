@@ -10,6 +10,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
 using Microsoft.Extensions.Configuration;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Auth;
+using Microsoft.WindowsAzure.Storage.Blob;
+using Microsoft.WindowsAzure.Storage.Queue;
 
 namespace JourneyNotesAPI.Controllers
 {
@@ -19,31 +23,48 @@ namespace JourneyNotesAPI.Controllers
     public class PeopleController : ControllerBase
     {
         private readonly IConfiguration _configuration;
+
+        // CosmosDB
         private readonly DocumentClient _client;
         private const string _dbName = "JourneyNotesDB";
         private const string _collectionNamePerson = "Person";
         private const string _collectionNameTrip = "Trip";
         private const string _collectionNamePitstop = "Pitstop";
 
+        // Queue
+        private readonly CloudStorageAccount _storageAccount;
+        private readonly CloudQueueClient _queueClient;
+        private readonly CloudQueue _messageQueue;
+        private const string _queueName = "tripqueue";
+
+        // Blob
+        private readonly CloudBlobClient _blobClient;
+        private readonly CloudBlobContainer _container;
+        private const string _containerName = "photos";
+
         public PeopleController(IConfiguration configuration)
         {
             _configuration = configuration;
 
-            var endpointUri =
-            _configuration["ConnectionStrings:CosmosDbConnection:EndpointUri"];
+            var accountName = _configuration["ConnectionStrings:StorageConnection:AccountName"];
+            var accountKey = _configuration["ConnectionStrings:StorageConnection:AccountKey"];
+            _storageAccount = new CloudStorageAccount(new StorageCredentials(accountName, accountKey), true);
 
-            var key =
-            _configuration["ConnectionStrings:CosmosDbConnection:PrimaryKey"];
-
+            // CosmosDB
+            var endpointUri = _configuration["ConnectionStrings:CosmosDbConnection:EndpointUri"];
+            var key = _configuration["ConnectionStrings:CosmosDbConnection:PrimaryKey"];
             _client = new DocumentClient(new Uri(endpointUri), key);
+
+            // Queue
+            _queueClient = _storageAccount.CreateCloudQueueClient();
+            _messageQueue = _queueClient.GetQueueReference(_queueName);
+
+            // Blob
+            _blobClient = _storageAccount.CreateCloudBlobClient();
+            _container = _blobClient.GetContainerReference(_containerName);
+
         }
 
-        // GET: api/Person
-        //[HttpGet]
-        //public IEnumerable<string> GetPersons()
-        //{
-        //    return new string[] { "valueX", "valueY" };
-        //}
 
         /// <summary>
         /// Gets the customer details by CustomerID
@@ -66,25 +87,9 @@ namespace JourneyNotesAPI.Controllers
         }
 
         /// <summary>
-        /// Adds a new person to the database
+        /// Allows the user to update their profile (nickname and avatar (if from eg a dropdown list - if not need to add blob feature)
         /// </summary>
-        /// <param name="newperson"></param>
         /// <returns></returns>
-        // POST: api/people
-        //[HttpPost]
-        //public async Task<ActionResult<string>> PostPerson([FromBody] NewPerson newperson)
-        //{
-        //    Person person = new Person
-        //    {
-        //        PersonId = "666",
-        //        //PersonId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value,
-        //        Nickname = newperson.Nickname,
-        //        Avatar = newperson.Avatar,
-        //    };
-        //    Document document = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePerson), person);
-        //    return Ok(document.Id);
-        //}
-
         //put: api/person
         [HttpPut]
         public async Task<ActionResult<string>> PutPerson([FromBody] NewPerson editperson)
@@ -117,12 +122,16 @@ namespace JourneyNotesAPI.Controllers
             return NotFound();
         }
 
+        /// <summary>
+        /// Deletes the current users all trips and pitstops and logs them out...
+        /// </summary>
+        /// <returns></returns>
         //DELETE: api/ApiWithActions/5
         [HttpDelete()]
         public async Task<ActionResult<string>> DeletePerson()
         {
-            string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
-            //string UserID = "666";
+            //string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            string UserID = "666";
 
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Person> query = _client.CreateDocumentQuery<Person>(
@@ -134,6 +143,73 @@ namespace JourneyNotesAPI.Controllers
 
             if (personDB != null)
             {
+                //get all the trips
+                FeedOptions queryOptionsTrips = new FeedOptions { MaxItemCount = -1 };
+                IQueryable<Trip> queryTrips = _client.CreateDocumentQuery<Trip>(
+                UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
+                $"SELECT * FROM C WHERE C.PersonId = '{UserID}'", queryOptionsTrips);
+                var listOfTrips = queryTrips.ToList();
+
+                foreach (Trip item in listOfTrips)
+                {
+                    //get all pitstops for the trip to be deleted
+                    FeedOptions queryOptionsTripPS = new FeedOptions { MaxItemCount = -1 };
+                    IQueryable<Pitstop> queryTripPS = _client.CreateDocumentQuery<Pitstop>(
+                    UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop),
+                    $"SELECT * FROM C where C.TripId = {item.TripId} AND C.PersonId = '{UserID}'", queryOptionsTripPS);
+                    var pitstopList = queryTripPS.ToList();
+
+                    foreach (var pitstop in pitstopList)
+                    {
+                        string documentId = pitstop.id;
+
+                        try
+                        {
+                            await _client.DeleteDocumentAsync(
+                            UriFactory.CreateDocumentUri(_dbName, _collectionNamePitstop, documentId));
+
+                            // Removing images from the blob storage
+                            string removed = await RemovePitstopImagesFromBlob(pitstop, _container);
+                        }
+                        catch (DocumentClientException de)
+                        {
+                            switch (de.StatusCode.Value)
+                            {
+                                case System.Net.HttpStatusCode.NotFound:
+                                    return NotFound();
+                            }
+                        }
+                    }
+
+                    //delete the trip
+                    FeedOptions queryOptionsTrip = new FeedOptions { MaxItemCount = -1 };
+                    IQueryable<Trip> queryTrip = _client.CreateDocumentQuery<Trip>(
+                    UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
+                    $"SELECT * FROM T WHERE T.TripId = {item.TripId} AND T.PersonId = '{UserID}'", queryOptionsTrip);
+                    var trip = queryTrip.ToList().FirstOrDefault();
+
+                    if (trip != null)
+                    {
+                        try
+                        {
+                            string TripDbId = trip.id;
+
+                            await _client.DeleteDocumentAsync(UriFactory.CreateDocumentUri(_dbName, _collectionNameTrip, TripDbId));
+
+                            // Removing images from the blob storage
+                            string removed = await RemoveTripImagesFromBlob(trip, _container);
+                        }
+                        catch (DocumentClientException de)
+                        {
+                            switch (de.StatusCode.Value)
+                            {
+                                case System.Net.HttpStatusCode.NotFound:
+                                    return NotFound();
+                            }
+                        }
+                    }
+                }
+
                 try
                 {
                     string documentId = personDB.id;
@@ -149,8 +225,48 @@ namespace JourneyNotesAPI.Controllers
                     }
                 }
             }
-            return NotFound();           
-
+            return NotFound();
         }
+
+        //Non-action
+        private static async Task<string> RemoveTripImagesFromBlob(Trip trip, CloudBlobContainer container)
+        {
+            string smallImageName = trip.MainPhotoSmallUrl;
+            string largeImageName = trip.MainPhotoUrl;
+            CloudBlockBlob smallImage = container.GetBlockBlobReference(smallImageName);
+            CloudBlockBlob largeImage = container.GetBlockBlobReference(largeImageName);
+
+            using (var deleteStream = await smallImage.OpenReadAsync()) { }
+            await smallImage.DeleteIfExistsAsync();
+
+            using (var deleteStream = await largeImage.OpenReadAsync()) { }
+            await largeImage.DeleteIfExistsAsync();
+
+            return $"Deleted images {smallImageName} and {largeImageName}";
+        }
+
+        private static async Task<string> RemovePitstopImagesFromBlob(Pitstop pitstop, CloudBlobContainer container)
+        {
+            string smallImageName = pitstop.PhotoSmallUrl;
+            string mediumImageName = pitstop.PhotoMediumUrl;
+            string largeImageName = pitstop.PhotoLargeUrl;
+
+            CloudBlockBlob smallImage = container.GetBlockBlobReference(smallImageName);
+            CloudBlockBlob mediumImage = container.GetBlockBlobReference(mediumImageName);
+            CloudBlockBlob largeImage = container.GetBlockBlobReference(largeImageName);
+
+            using (var deleteStream = await smallImage.OpenReadAsync()) { }
+            await smallImage.DeleteIfExistsAsync();
+
+            using (var deleteStream = await mediumImage.OpenReadAsync()) { }
+            await mediumImage.DeleteIfExistsAsync();
+
+            using (var deleteStream = await largeImage.OpenReadAsync()) { }
+            await largeImage.DeleteIfExistsAsync();
+
+            return $"Deleted images {smallImageName}, {mediumImageName} and {largeImageName}";
+        }
+
     }
 }
+

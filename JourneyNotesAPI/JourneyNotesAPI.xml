@@ -13,9 +13,14 @@
         </member>
         <member name="M:JourneyNotesAPI.Controllers.PeopleController.PutPerson(JourneyEntities.NewPerson)">
             <summary>
-            Adds a new person to the database
+            Allows the user to update their profile (nickname and avatar (if from eg a dropdown list - if not need to add blob feature)
             </summary>
-            <param name="newperson"></param>
+            <returns></returns>
+        </member>
+        <member name="M:JourneyNotesAPI.Controllers.PeopleController.DeletePerson">
+            <summary>
+            Deletes the current users all trips and pitstops and logs them out...
+            </summary>
             <returns></returns>
         </member>
         <member name="M:JourneyNotesAPI.Controllers.PitstopsController.PostPitstop(JourneyEntities.NewPitstop)">
