@@ -130,8 +130,8 @@ namespace JourneyNotesAPI.Controllers
         [HttpDelete()]
         public async Task<ActionResult<string>> DeletePerson()
         {
-            //string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
-            string UserID = "666";
+            string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            //string UserID = "666";
 
             FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
             IQueryable<Person> query = _client.CreateDocumentQuery<Person>(
