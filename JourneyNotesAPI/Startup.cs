@@ -125,12 +125,11 @@ namespace JourneyNotesAPI
             });
 
             app.UseCors("MyPolicy");
+          
             //Auth0
             app.UseAuthentication();
 
             app.UseMvc();
-
-
         }
     }
 }

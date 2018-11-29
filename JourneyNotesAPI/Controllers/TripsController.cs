@@ -149,7 +149,7 @@ namespace JourneyNotesAPI.Controllers
 
             IQueryable<Pitstop> query2 = _client.CreateDocumentQuery<Pitstop>(
             UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop),
-            $"SELECT * FROM C WHERE C.TripId = {Id} AND C.PersonId = '{UserID}' Order by C.PitstopDate Desc", queryOptions);
+            $"SELECT * FROM C WHERE C.TripId = {Id} AND C.PersonId = '{UserID}' Order by C.PitstopDate", queryOptions);
             var pitstops = query2.ToList();
 
 
