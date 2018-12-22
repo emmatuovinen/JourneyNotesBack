@@ -36,7 +36,8 @@ namespace JourneyNotesAPI
             //    // This lambda determines whether user consent for non-essential cookies is needed for a given request.
             //    options.CheckConsentNeeded = context => true;
             //    options.MinimumSameSitePolicy = SameSiteMode.None;
-            //});
+            //});'
+            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
 
             services.AddAuthentication(options =>
             {
@@ -104,6 +105,7 @@ namespace JourneyNotesAPI
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
+            app.UseDeveloperExceptionPage();
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -117,12 +119,6 @@ namespace JourneyNotesAPI
             app.UseHttpsRedirection();
             app.UseStaticFiles();
             app.UseCookiePolicy();
-        // Swagger:
-            app.UseSwagger();
-            app.UseSwaggerUI(c =>
-            {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "JourneyNotes API");
-            });
 
             app.UseCors("MyPolicy");
             //Auth0
@@ -130,6 +126,12 @@ namespace JourneyNotesAPI
 
             app.UseMvc();
 
+            // Swagger:
+            app.UseSwagger();
+            app.UseSwaggerUI(c =>
+            {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "JourneyNotes API");
+            });
 
         }
     }
