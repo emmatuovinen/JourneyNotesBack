@@ -10,13 +10,12 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Documents;
-using Microsoft.Azure.Documents.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Auth;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
-using Newtonsoft.Json.Linq;
+using Microsoft.WindowsAzure.Storage.Table;
 
 namespace JourneyNotesAPI.Controllers
 {
@@ -26,13 +25,6 @@ namespace JourneyNotesAPI.Controllers
     public class TripsController : ControllerBase
     {
         private readonly IConfiguration _configuration;
-
-        // CosmosDB
-        private readonly DocumentClient _client;
-        private const string _dbName = "JourneyNotesDB";
-        private const string _collectionNamePerson = "Person";
-        private const string _collectionNameTrip = "Trip";
-        private const string _collectionNamePitstop = "Pitstop";
 
         // Queue
         private readonly CloudStorageAccount _storageAccount;
@@ -45,6 +37,16 @@ namespace JourneyNotesAPI.Controllers
         private readonly CloudBlobContainer _container;
         private const string _containerName = "photos";
 
+        //Table
+        private readonly CloudTableClient _tableClient;
+        private readonly CloudTable _tablePerson;
+        private readonly CloudTable _tableTrip;
+        private readonly CloudTable _tablePitstop;
+
+        private const string _tableNamePerson = "person";
+        private const string _tableNamePitstop = "pitstop";
+        private const string _tableNameTrip = "trip";
+
         public TripsController(IConfiguration configuration)
         {
             _configuration = configuration;
@@ -52,11 +54,6 @@ namespace JourneyNotesAPI.Controllers
             var accountName = _configuration["ConnectionStrings:StorageConnection:AccountName"];
             var accountKey = _configuration["ConnectionStrings:StorageConnection:AccountKey"];
             _storageAccount = new CloudStorageAccount(new StorageCredentials(accountName, accountKey), true);
-
-            // CosmosDB
-            var endpointUri = _configuration["ConnectionStrings:CosmosDbConnection:EndpointUri"];
-            var key = _configuration["ConnectionStrings:CosmosDbConnection:PrimaryKey"];
-            _client = new DocumentClient(new Uri(endpointUri), key);
 
             // Queue
             _queueClient = _storageAccount.CreateCloudQueueClient();
@@ -66,6 +63,11 @@ namespace JourneyNotesAPI.Controllers
             _blobClient = _storageAccount.CreateCloudBlobClient();
             _container = _blobClient.GetContainerReference(_containerName);
 
+            //Table
+            _tableClient = _storageAccount.CreateCloudTableClient();
+            _tablePerson = _tableClient.GetTableReference(_tableNamePerson);
+            _tablePitstop = _tableClient.GetTableReference(_tableNamePitstop);
+            _tableTrip = _tableClient.GetTableReference(_tableNameTrip);
         }
 
         /// <summary>
@@ -79,52 +81,60 @@ namespace JourneyNotesAPI.Controllers
         {
             string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
             //string UserID = "666";
-            var triplist = new List<Trip>();
+            var tripList = new List<TripTableEntity>();
 
             //Check if user exists
-            FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
-            IQueryable<Person> query = _client.CreateDocumentQuery<Person>(
-            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePerson),
-            $"SELECT * FROM C WHERE C.PersonId = '{UserID}'", queryOptions);
-            var userCount = query.ToList().Count();
-
-            if (userCount != 0)
+            var userList = new List<PersonTableEntity>();
+            var personQuery = new TableQuery<PersonTableEntity>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, UserID));
+            TableContinuationToken tokenPerson = null;
+            do
             {
-                FeedOptions queryOptions2 = new FeedOptions { MaxItemCount = -1 };
-                IQueryable<Trip> query2 = _client.CreateDocumentQuery<Trip>(
-                UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
-                $"SELECT * FROM C WHERE C.PersonId = '{UserID}' Order by C.StartDate Desc", queryOptions2);
-                triplist = query2.ToList();
-                if (triplist == null)
+                TableQuerySegment<PersonTableEntity> resultSegment = await _tablePerson.ExecuteQuerySegmentedAsync(personQuery, tokenPerson);
+                tokenPerson = resultSegment.ContinuationToken;
+
+                foreach (PersonTableEntity entity in resultSegment.Results)
+                {
+                    userList.Add(entity);
+                }
+            } while (tokenPerson != null);
+
+            //if user exits get trips else add user
+            if (userList.Count() != 0)
+            {
+                var tripQuery = new TableQuery<TripTableEntity>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, UserID));
+                TableContinuationToken tokenTrip = null;
+                do
+                {
+                    TableQuerySegment<TripTableEntity> resultSegment = await _tableTrip.ExecuteQuerySegmentedAsync(tripQuery, tokenTrip);
+                    tokenTrip = resultSegment.ContinuationToken;
+
+                    foreach (TripTableEntity entity in resultSegment.Results)
+                    {
+                        tripList.Add(entity);
+                    }
+                } while (tokenTrip != null);
+
+                if (tripList == null)
                     return Ok("[]");
             }
             else
             {
-                //Add user to Person-Collection and return an empty triplist
+                //Add user to Person table and return an empty triplist
                 Person person = new Person
                 {
                     PersonId = UserID,
                     Nickname = string.Empty,
                     Avatar = string.Empty
                 };
-                Document document = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePerson), person);
+
+                PersonTableEntity personTable = new PersonTableEntity(person);
+
+                TableOperation insertOperation = TableOperation.Insert(personTable);
+
+                await _tablePerson.ExecuteAsync(insertOperation);
             }
-            return Ok(triplist);
+            return Ok(tripList.OrderByDescending(a => a.StartDate));
         }
-
-        // GET: api/Trips/5
-        // One trip by TripId
-        //[HttpGet("{id}", Name = "GetTrip")]
-        //public ActionResult<string> GetTrip(string id)
-        //{
-        //    FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
-        //    IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
-        //    UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
-        //    $"SELECT * FROM C WHERE C.TripId = '{id}'", queryOptions);
-        //    var tripDetails = query.ToList();
-
-        //    return Ok(tripDetails);
-        //}
 
         /// <summary>
         /// Gets the trip and the pitstops under it with the trip id
@@ -133,29 +143,58 @@ namespace JourneyNotesAPI.Controllers
         /// <returns></returns>
         // GET api/Trips/5
         [HttpGet("{Id}", Name = "GetTripAndPitstops")]
-        public ActionResult<string> GetTripAndPitstops(int Id)
+        public async Task<ActionResult<string>> GetTripAndPitstops(int Id)
         {
             string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
             //string UserID = "666";
 
-            FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
-            IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
-            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
-            $"SELECT * FROM T WHERE T.TripId = {Id} AND T.PersonId = '{UserID}'", queryOptions);
-            Trip tripDetails = query.ToList().FirstOrDefault();
+            var tripList = new List<TripTableEntity>();
+
+            var tripQuery = new TableQuery<TripTableEntity>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, UserID));
+            TableContinuationToken tokenTrip = null;
+            do
+            {
+                TableQuerySegment<TripTableEntity> resultSegment = await _tableTrip.ExecuteQuerySegmentedAsync(tripQuery, tokenTrip);
+                tokenTrip = resultSegment.ContinuationToken;
+
+                foreach (TripTableEntity entity in resultSegment.Results)
+                {
+                    if (entity.TripId == Id)
+                        tripList.Add(entity);
+                }
+            } while (tokenTrip != null);
+
+            var tripDetails = tripList.FirstOrDefault();
 
             if (tripDetails == null)
                 return NotFound();
 
-            IQueryable<Pitstop> query2 = _client.CreateDocumentQuery<Pitstop>(
-            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop),
-            $"SELECT * FROM C WHERE C.TripId = {Id} AND C.PersonId = '{UserID}' Order by C.PitstopDate", queryOptions);
-            var pitstops = query2.ToList();
 
+            //Get pitstops
+            List<Pitstop> pitstopList = new List<Pitstop>();
 
-            tripDetails.Pitstops = pitstops;
+            TableQuery<PitstopTableEntity> queryPitstop = new TableQuery<PitstopTableEntity>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, Id.ToString() + ";" + UserID));
 
-            return Ok(tripDetails);
+            TableContinuationToken tokenPitstop = null;
+
+            do
+            {
+                TableQuerySegment<PitstopTableEntity> resultSegment = await _tablePitstop.ExecuteQuerySegmentedAsync(queryPitstop, tokenPitstop);
+                tokenPitstop = resultSegment.ContinuationToken;
+
+                foreach (PitstopTableEntity entity in resultSegment.Results)
+                {
+                    Pitstop pitstop =new  Pitstop(entity);
+                    pitstopList.Add(pitstop);
+                }
+            } while (tokenPitstop != null);
+
+            Trip trip = new Trip { TripId = tripDetails.TripId, Description= tripDetails.Description,
+                EndDate = tripDetails.EndDate, Headline = tripDetails.Headline, MainPhotoSmallUrl =tripDetails.MainPhotoSmallUrl,
+                MainPhotoUrl = tripDetails.MainPhotoUrl, PersonId=tripDetails.PersonId, Pitstops = pitstopList, Position=tripDetails.Position,
+                StartDate =tripDetails.StartDate};
+
+            return Ok(trip);
         }
 
         /// <summary>
@@ -165,10 +204,11 @@ namespace JourneyNotesAPI.Controllers
         /// <returns></returns>
         // POST: api/trips
         [HttpPost(Name = "PostNewTrip")]
-        [Consumes("multipart/form-data"), Authorize]
+        [Consumes("multipart/form-data")]
         public async Task<ActionResult<string>> PostNewTrip(NewTrip newTrip)
         {
             string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+            //string UserID = "666";
 
             //if (!ModelState.IsValid)
             //{
@@ -177,19 +217,28 @@ namespace JourneyNotesAPI.Controllers
 
             Trip trip = new Trip();
 
+            var tripList = new List<TripTableEntity>();
+
             string photoName = await StorePicture(newTrip.picture);
 
             // Determining the tripId number
-            FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
-            IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
-            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
-            $"SELECT * FROM C WHERE C.PersonId = '{UserID}'", queryOptions);
-            var tripCount = query.ToList().Count;
+            var tripQuery = new TableQuery<TripTableEntity>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, UserID));
+            TableContinuationToken tokenTrip = null;
+            do
+            {
+                TableQuerySegment<TripTableEntity> resultSegment = await _tableTrip.ExecuteQuerySegmentedAsync(tripQuery, tokenTrip);
+                tokenTrip = resultSegment.ContinuationToken;
 
-            if (tripCount == 0)
-                tripCount = 0;
-            else
-                tripCount = query.ToList().Max(a => a.TripId);
+                foreach (TripTableEntity entity in resultSegment.Results)
+                {
+                    tripList.Add(entity);
+                }
+            } while (tokenTrip != null);
+
+            var tripCount = 0;
+
+            if (tripList.Count() != 0)
+                tripCount = tripList.Max(a => a.TripId);
 
             trip.TripId = tripCount + 1;
             trip.PersonId = UserID;
@@ -201,10 +250,14 @@ namespace JourneyNotesAPI.Controllers
             trip.MainPhotoUrl = photoName;  // this needs to be updated! And the picture will be deleted at some point - we will not store huge pics.
             trip.MainPhotoSmallUrl = string.Empty;
 
-            Document document = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip), trip);
+            TripTableEntity tripTable = new TripTableEntity(trip);
+
+            TableOperation insertOperation = TableOperation.Insert(tripTable);
+
+            await _tableTrip.ExecuteAsync(insertOperation);
 
             QueueParam toQueue = new QueueParam();
-            toQueue.Id = document.Id;
+            // toQueue.Id = document.Id;
             toQueue.PictureUri = photoName;
 
             await AddQueueItem(toQueue);
@@ -226,20 +279,26 @@ namespace JourneyNotesAPI.Controllers
             string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
             //string UserID = "666";
 
-            FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
-            IQueryable<Trip> query = _client.CreateDocumentQuery<Trip>(
-            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
-            $"SELECT * FROM C WHERE C.TripId = {id} AND C.PersonId = '{UserID}'", queryOptions);
-            var tripList = query.ToList();
+            var tripList = new List<TripTableEntity>();
+
+            var tripQuery = new TableQuery<TripTableEntity>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, UserID));
+            TableContinuationToken tokenTrip = null;
+            do
+            {
+                TableQuerySegment<TripTableEntity> resultSegment = await _tableTrip.ExecuteQuerySegmentedAsync(tripQuery, tokenTrip);
+                tokenTrip = resultSegment.ContinuationToken;
+
+                foreach (TripTableEntity entity in resultSegment.Results)
+                {
+                    if (entity.TripId == id)
+                        tripList.Add(entity);
+                }
+            } while (tokenTrip != null);
+
             var trip = tripList.FirstOrDefault();
 
             if (trip != null)
             {
-                string documentId = trip.id;
-
-                var documentUri = UriFactory.CreateDocumentUri(_dbName, _collectionNameTrip, documentId);
-
-                Document document = await _client.ReadDocumentAsync(documentUri);
                 trip.PersonId = UserID;
                 trip.Headline = editedTrip.Headline;
                 trip.Description = editedTrip.Description;
@@ -249,9 +308,11 @@ namespace JourneyNotesAPI.Controllers
                 trip.MainPhotoUrl = editedTrip.MainPhotoUrl;  // this needs to be updated! And the picture will be deleted at some point - we will not store huge pics.
                 trip.MainPhotoSmallUrl = editedTrip.MainPhotoSmallUrl;
 
-                await _client.ReplaceDocumentAsync(document.SelfLink, trip);
+                TableOperation replaceOperation = TableOperation.Replace(trip);
 
-                return Ok(document.Id);
+                await _tableTrip.ExecuteAsync(replaceOperation);
+
+                return Ok(trip);
             }
             return NotFound();
         }
@@ -269,51 +330,55 @@ namespace JourneyNotesAPI.Controllers
             string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
             //string UserID = "666";
 
-            //get all pitstops for the trip to be deleted
-            FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
-            IQueryable<Pitstop> query = _client.CreateDocumentQuery<Pitstop>(
-            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop),
-            $"SELECT * FROM C where C.TripId = {id} AND C.PersonId = '{UserID}'", queryOptions);
-            var pitstopList = query.ToList();
+            var tripList = new List<TripTableEntity>();
 
-            foreach (var pitstop in pitstopList)
+            var tripQuery = new TableQuery<TripTableEntity>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, UserID));
+            TableContinuationToken tokenTrip = null;
+            do
             {
-                string documentId = pitstop.id;
+                TableQuerySegment<TripTableEntity> resultSegment = await _tableTrip.ExecuteQuerySegmentedAsync(tripQuery, tokenTrip);
+                tokenTrip = resultSegment.ContinuationToken;
 
+                foreach (TripTableEntity entity in resultSegment.Results)
+                {
+                    if(entity.TripId == id)
+                        tripList.Add(entity);
+                }
+            } while (tokenTrip != null);
+
+            var tripToDelete = tripList.FirstOrDefault();
+
+            if (tripToDelete != null)
+            {
                 try
                 {
-                    await _client.DeleteDocumentAsync(
-                    UriFactory.CreateDocumentUri(_dbName, _collectionNamePitstop, documentId));
+                    List<Pitstop> pitstopList = new List<Pitstop>();
 
-                    // Removing images from the blob storage
-                    string removed = await RemovePitstopImagesFromBlob(pitstop, _container);
-                }
-                catch (DocumentClientException de)
-                {
-                    switch (de.StatusCode.Value)
+                    TableQuery<PitstopTableEntity> queryPitstop = new TableQuery<PitstopTableEntity>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, tripToDelete.TripId.ToString() + ";" + UserID));
+
+                    TableContinuationToken tokenPitstop = null;
+
+                    do
                     {
-                        case System.Net.HttpStatusCode.NotFound:
-                            return NotFound();
-                    }
-                }
-            }
+                        TableQuerySegment<PitstopTableEntity> resultSegment = await _tablePitstop.ExecuteQuerySegmentedAsync(queryPitstop, tokenPitstop);
+                        tokenPitstop = resultSegment.ContinuationToken;
 
-            FeedOptions queryOptions2 = new FeedOptions { MaxItemCount = -1 };
-            IQueryable<Trip> query2 = _client.CreateDocumentQuery<Trip>(
-            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
-            $"SELECT * FROM T WHERE T.TripId = {id} AND T.PersonId = '{UserID}'", queryOptions);
-            var trip = query2.ToList().FirstOrDefault();
+                        foreach (PitstopTableEntity entity in resultSegment.Results)
+                        {                         
+                            string removedPitstop = await RemovePitstopImagesFromBlob(entity, _container);
 
-            if (trip != null)
-            {
-                try
-                {
-                    string TripDbId = trip.id;
+                            TableOperation deleteOperation = TableOperation.Delete(entity);
 
-                    await _client.DeleteDocumentAsync(UriFactory.CreateDocumentUri(_dbName, _collectionNameTrip, TripDbId));
-                    
+                            await _tablePitstop.ExecuteAsync(deleteOperation);
+                        }
+                    } while (tokenPitstop != null);
+
                     // Removing images from the blob storage
-                    string removed = await RemoveTripImagesFromBlob(trip, _container);
+                    string removed = await RemoveTripImagesFromBlob(tripToDelete, _container);
+
+                    TableOperation deleteOperationTrip = TableOperation.Delete(tripToDelete);
+
+                    await _tableTrip.ExecuteAsync(deleteOperationTrip);
 
                     return Ok($"Deleted trip {id} and all pitstops therein");
                 }
@@ -333,15 +398,15 @@ namespace JourneyNotesAPI.Controllers
         // NON ACTIONS
         // ------------------------------------------------------------
 
-        private static async Task<string> RemoveTripImagesFromBlob(Trip trip, CloudBlobContainer container)
+        private static async Task<string> RemoveTripImagesFromBlob(TripTableEntity trip, CloudBlobContainer container)
         {
             string smallImageName = trip.MainPhotoSmallUrl;
             string largeImageName = trip.MainPhotoUrl;
-            CloudBlockBlob smallImage = container.GetBlockBlobReference(smallImageName);
+           // CloudBlockBlob smallImage = container.GetBlockBlobReference(smallImageName);
             CloudBlockBlob largeImage = container.GetBlockBlobReference(largeImageName);
 
-            using (var deleteStream = await smallImage.OpenReadAsync()) { }
-                await smallImage.DeleteIfExistsAsync();
+            //using (var deleteStream = await smallImage.OpenReadAsync()) { }
+            //await smallImage.DeleteIfExistsAsync();
 
             using (var deleteStream = await largeImage.OpenReadAsync()) { }
             await largeImage.DeleteIfExistsAsync();
@@ -349,21 +414,21 @@ namespace JourneyNotesAPI.Controllers
             return $"Deleted images {smallImageName} and {largeImageName}";
         }
 
-        private static async Task<string> RemovePitstopImagesFromBlob(Pitstop pitstop, CloudBlobContainer container)
+        public static async Task<string> RemovePitstopImagesFromBlob(PitstopTableEntity pitstop, CloudBlobContainer container)
         {
             string smallImageName = pitstop.PhotoSmallUrl;
             string mediumImageName = pitstop.PhotoMediumUrl;
             string largeImageName = pitstop.PhotoLargeUrl;
 
-            CloudBlockBlob smallImage = container.GetBlockBlobReference(smallImageName);
-            CloudBlockBlob mediumImage = container.GetBlockBlobReference(mediumImageName);
+           // CloudBlockBlob smallImage = container.GetBlockBlobReference(smallImageName);
+            //CloudBlockBlob mediumImage = container.GetBlockBlobReference(mediumImageName);
             CloudBlockBlob largeImage = container.GetBlockBlobReference(largeImageName);
 
-            using (var deleteStream = await smallImage.OpenReadAsync()) { }
-            await smallImage.DeleteIfExistsAsync();
+            //using (var deleteStream = await smallImage.OpenReadAsync()) { }
+            //await smallImage.DeleteIfExistsAsync();
 
-            using (var deleteStream = await mediumImage.OpenReadAsync()) { }
-            await mediumImage.DeleteIfExistsAsync();
+            //using (var deleteStream = await mediumImage.OpenReadAsync()) { }
+            //await mediumImage.DeleteIfExistsAsync();
 
             using (var deleteStream = await largeImage.OpenReadAsync()) { }
             await largeImage.DeleteIfExistsAsync();

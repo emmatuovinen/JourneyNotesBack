@@ -7,8 +7,6 @@ namespace JourneyEntities
 {
     public class Pitstop
     {
-        public string id { get; set; }
-
         public int PitstopId { get; set; }
 
         public string PersonId { get; set; }
@@ -30,6 +28,23 @@ namespace JourneyEntities
         public string pitstopPosition { get; set; }
 
         public string Address { get; set; }
+
+        public Pitstop() { }
+        public Pitstop(PitstopTableEntity entity)
+        {
+            this.PitstopId = entity.PitstopId;
+            this.PersonId = entity.PersonId;
+            this.Title = entity.Title;
+            this.Note = entity.Note;
+            this.PitstopDate = entity.PitstopDate;
+            this.PhotoLargeUrl = entity.PhotoLargeUrl;
+            this.PhotoMediumUrl = entity.PhotoMediumUrl;
+            this.PhotoSmallUrl = entity.PhotoSmallUrl;
+            this.TripId = entity.TripId;
+            this.pitstopPosition = entity.pitstopPosition;
+            this.Address = entity.Address;
+        }
+
     }
 
     public class NewPitstop

@@ -11,10 +11,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Test", "Test", "{19BB5750-8
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Auth0testit", "Auth0testit\Auth0testit.csproj", "{25ED755A-997D-463B-9961-D3DD6090830D}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TripPhotosFunctionApp", "TripPhotosFunctionApp\TripPhotosFunctionApp.csproj", "{B37CF88F-655C-4079-89CC-633B63D2601B}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PitstopPhotosFunctionApp", "PitstopPhotosFunctionApp\PitstopPhotosFunctionApp.csproj", "{91DD566A-9B40-4DCE-BE47-C1ADD2DBBA57}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,14 +29,6 @@ Global
 		{25ED755A-997D-463B-9961-D3DD6090830D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{25ED755A-997D-463B-9961-D3DD6090830D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{25ED755A-997D-463B-9961-D3DD6090830D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B37CF88F-655C-4079-89CC-633B63D2601B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B37CF88F-655C-4079-89CC-633B63D2601B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B37CF88F-655C-4079-89CC-633B63D2601B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B37CF88F-655C-4079-89CC-633B63D2601B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{91DD566A-9B40-4DCE-BE47-C1ADD2DBBA57}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{91DD566A-9B40-4DCE-BE47-C1ADD2DBBA57}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{91DD566A-9B40-4DCE-BE47-C1ADD2DBBA57}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{91DD566A-9B40-4DCE-BE47-C1ADD2DBBA57}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

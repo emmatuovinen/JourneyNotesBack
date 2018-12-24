@@ -10,7 +10,13 @@ namespace JourneyEntities
 
         public string Avatar { get; set; }
 
-        public string id { get; set; }
+        public Person() { }
+        public Person(PersonTableEntity entity)
+        {
+            this.PersonId = entity.PersonId;
+            this.Nickname = entity.Nickname;
+            this.Avatar = entity.Avatar;
+        }
     }
 
     public class NewPerson

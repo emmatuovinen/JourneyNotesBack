@@ -26,9 +26,7 @@ namespace JourneyEntities
         public string Position { get; set; }
 
         public List<Pitstop> Pitstops { get; set; }
-
-        public string id { get; set; }
-
+   
         //public IFormFile picture { get; set; }
     }
 

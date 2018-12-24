@@ -7,7 +7,8 @@ namespace JourneyEntities
 {
     public class QueueParam
     {
-        public string Id { get; set; }
+        public string PartitionKey { get; set; }
+        public string RowKey { get; set; }
 
         public string PictureUri { get; set; }
 

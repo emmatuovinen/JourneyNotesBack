@@ -15,6 +15,7 @@ using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Auth;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Queue;
+using Microsoft.WindowsAzure.Storage.Table;
 
 namespace JourneyNotesAPI.Controllers
 {
@@ -24,11 +25,6 @@ namespace JourneyNotesAPI.Controllers
     public class PitstopsController : ControllerBase
     {
         private readonly IConfiguration _configuration;
-        private readonly DocumentClient _client;
-        private const string _dbName = "JourneyNotesDB";
-        private const string _collectionNamePerson = "Person";
-        private const string _collectionNameTrip = "Trip";
-        private const string _collectionNamePitstop = "Pitstop";
 
         // Queue
         private readonly CloudStorageAccount _storageAccount;
@@ -41,17 +37,23 @@ namespace JourneyNotesAPI.Controllers
         private readonly CloudBlobContainer _container;
         private const string _containerName = "photos";
 
+        //Table
+        private readonly CloudTableClient _tableClient;
+        private readonly CloudTable _tablePerson;
+        private readonly CloudTable _tableTrip;
+        private readonly CloudTable _tablePitstop;
+
+        private const string _tableNamePerson = "person";
+        private const string _tableNamePitstop = "pitstop";
+        private const string _tableNameTrip = "trip";
+
+
         public PitstopsController(IConfiguration configuration)
         {
             _configuration = configuration;
             var accountName = _configuration["ConnectionStrings:StorageConnection:AccountName"];
             var accountKey = _configuration["ConnectionStrings:StorageConnection:AccountKey"];
             _storageAccount = new CloudStorageAccount(new StorageCredentials(accountName, accountKey), true);
-
-            // CosmosDb
-            var endpointUri = _configuration["ConnectionStrings:CosmosDbConnection:EndpointUri"];
-            var key = _configuration["ConnectionStrings:CosmosDbConnection:PrimaryKey"];
-            _client = new DocumentClient(new Uri(endpointUri), key);
 
             // Queue
             _queueClient = _storageAccount.CreateCloudQueueClient();
@@ -61,39 +63,13 @@ namespace JourneyNotesAPI.Controllers
             _blobClient = _storageAccount.CreateCloudBlobClient();
             _container = _blobClient.GetContainerReference(_containerName);
 
+            //Table
+            _tableClient = _storageAccount.CreateCloudTableClient();
+            _tablePerson = _tableClient.GetTableReference(_tableNamePerson);
+            _tablePitstop = _tableClient.GetTableReference(_tableNamePitstop);
+            _tableTrip = _tableClient.GetTableReference(_tableNameTrip);
+
         }
-
-        // We have everything in Azure so no need for this:
-        //_client.CreateDatabaseIfNotExistsAsync(new Database
-        //{
-        //    Id = _dbName
-        //}).Wait();
-
-        //_client.CreateDocumentCollectionIfNotExistsAsync(
-        //UriFactory.CreateDatabaseUri(_dbName),
-        //new DocumentCollection { Id = _collectionNameTrip });
-
-        // GET: api/Pitstop
-        // No need for this, since you get them from api/trips/5.
-        //[HttpGet]
-        //public IEnumerable<string> GetPitstops()
-        //{
-        //    return new string[] { "value1", "value2" };
-        //}
-
-        // GET: api/pitstops/5
-        // No need for this, since you get them from api/trips/5.
-        //[HttpGet("{id}", Name = "GetPitstop")]
-        //public ActionResult<Pitstop> GetPitstop(int id)
-        //{
-        //    FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
-        //    IQueryable<Pitstop> query = _client.CreateDocumentQuery<Pitstop>(
-        //    UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
-        //    $"SELECT * FROM C WHERE C.PitstopId = {id}", queryOptions);
-        //    Pitstop pitstopDetails = query.ToList().FirstOrDefault();
-
-        //    return Ok(pitstopDetails);
-        //}
 
         /// <summary>
         /// Adds a new Pitstop under the user and the chosen Trip
@@ -110,32 +86,56 @@ namespace JourneyNotesAPI.Controllers
             string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
             //string UserID = "666";
 
-            //Check if tripID exisists in Trips...
-            FeedOptions queryOptionsT = new FeedOptions { MaxItemCount = -1 };
-            IQueryable<Pitstop> queryT = _client.CreateDocumentQuery<Pitstop>(
-            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNameTrip),
-            $"SELECT * FROM C WHERE C.TripId = {newPitstop.TripId} AND C.PersonId = '{UserID}'", queryOptionsT);
-            var Trip = queryT.ToList().Count;
+            List<Pitstop> pitstopList = new List<Pitstop>();
 
-            string photoName = await StorePicture(newPitstop.picture);
+            var tripList = new List<TripTableEntity>();
 
-            if (Trip != 0)
+            //TripEntity from trip table
+            var tripQuery =  new TableQuery<TripTableEntity>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, UserID));
+            TableContinuationToken tokenTrip = null;
+            do
             {
-                // We need to get the TripId from the http request!
-                Pitstop pitstop = new Pitstop();
-                FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
-                IQueryable<Pitstop> query = _client.CreateDocumentQuery<Pitstop>(
-                UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop),
-                $"SELECT * FROM C WHERE C.TripId = {newPitstop.TripId} AND C.PersonId = '{UserID}'", queryOptions);
-                var pitstopCount = query.ToList().Count;
+                TableQuerySegment<TripTableEntity> resultSegment = await _tableTrip.ExecuteQuerySegmentedAsync(tripQuery, tokenTrip);
+                tokenTrip = resultSegment.ContinuationToken;
 
-                if (pitstopCount == 0)
-                    pitstopCount = 0;
-                else
-                    pitstopCount = query.ToList().Max(a => a.PitstopId);
+                foreach (TripTableEntity entity in resultSegment.Results)
+                {
+                    tripList.Add(entity);
+                }
+            } while (tokenTrip != null);
+
+            //Get pitstops
+            List < PitstopTableEntity > pitstopList2 = new List<PitstopTableEntity>();
+
+            TableQuery<PitstopTableEntity> pitstopQuery = new TableQuery<PitstopTableEntity>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, newPitstop.TripId.ToString() + ";" + UserID));
+
+            TableContinuationToken tokenPitstop = null;
+
+            do
+            {
+                TableQuerySegment<PitstopTableEntity> resultSegment = await _tablePitstop.ExecuteQuerySegmentedAsync(pitstopQuery, tokenPitstop);
+                tokenPitstop = resultSegment.ContinuationToken;
+
+                foreach (PitstopTableEntity entity in resultSegment.Results)
+                {
+                        pitstopList2.Add(entity);
+                }
+            } while (tokenPitstop != null);
+
+            //Check if trip exists in trip table (if not return not found)
+            if(tripList.Where(a => a.TripId == newPitstop.TripId).Count() != 0)
+            {
+                var nextPitsop = 1;
+
+                if (pitstopList2.Count != 0)
+                    nextPitsop = pitstopList2.Select(a => a.PitstopId).Max() + 1;
+
+                string photoName = await StorePicture(newPitstop.picture);
+
+                Pitstop pitstop = new Pitstop();
 
                 pitstop.PersonId = UserID;
-                pitstop.PitstopId = pitstopCount + 1;
+                pitstop.PitstopId = nextPitsop;
                 pitstop.Title = newPitstop.Title;
                 pitstop.Note = newPitstop.Note;
                 pitstop.PitstopDate = newPitstop.PitstopDate;
@@ -146,15 +146,18 @@ namespace JourneyNotesAPI.Controllers
                 pitstop.pitstopPosition = newPitstop.pitstopPosition;
                 pitstop.Address = newPitstop.Address;
 
-                Document documentPitstop = await _client.CreateDocumentAsync(UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop), pitstop);
+                PitstopTableEntity pitstopTable = new PitstopTableEntity(pitstop);
 
-                await AddQueueItem(new QueueParam { Id = documentPitstop.Id, PictureUri = photoName });
+                TableOperation insertOperation = TableOperation.Insert(pitstopTable);
 
-                //return Ok(documentPitstop.Id);
+                await _tablePitstop.ExecuteAsync(insertOperation);
+            
+                await AddQueueItem(new QueueParam { PartitionKey = pitstopTable.PartitionKey, RowKey = pitstopTable.RowKey, PictureUri = photoName });
+
                 return Ok($"Pitstop created under trip {pitstop.TripId}, id: {pitstop.PitstopId}");
-            }
-            return NotFound();
         }
+            return NotFound();
+    }
 
         /// <summary>
         /// Updates a certain pitstop by PitstopId
@@ -170,12 +173,25 @@ namespace JourneyNotesAPI.Controllers
             string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
             //string UserID = "666";
 
-            FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
-            IQueryable<Pitstop> query = _client.CreateDocumentQuery<Pitstop>(
-            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop),
-            $"SELECT * FROM C WHERE C.PitstopId = {PitstopId} AND C.TripId = {TripId} AND C.PersonId = '{UserID}'", queryOptions);
-            Pitstop pitstop = query.ToList().FirstOrDefault();
+            var pitstopList = new List<PitstopTableEntity>();
 
+            var pitstopQuery = new TableQuery<PitstopTableEntity>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, TripId.ToString() + ";" + UserID));
+            TableContinuationToken tokenPitstop = null;
+            do
+            {
+                TableQuerySegment<PitstopTableEntity> resultSegment = await _tablePitstop.ExecuteQuerySegmentedAsync(pitstopQuery, tokenPitstop);
+                tokenPitstop = resultSegment.ContinuationToken;
+
+                foreach (PitstopTableEntity entity in resultSegment.Results)
+                {
+                    if (entity.PitstopId == PitstopId)
+                        pitstopList.Add(entity);
+                }
+            } while (tokenPitstop != null);
+
+            var pitstop = pitstopList.FirstOrDefault();
+
+            //not working...
             if (pitstop != null)
             {
                 pitstop.Title = updatedPitstop.Title;
@@ -184,15 +200,11 @@ namespace JourneyNotesAPI.Controllers
                 pitstop.pitstopPosition = updatedPitstop.pitstopPosition;
                 pitstop.Address = updatedPitstop.Address;
 
-                string documentId = pitstop.id;
+                TableOperation replaceOperation = TableOperation.Replace(pitstop);
 
-                var documentUri = UriFactory.CreateDocumentUri(_dbName, _collectionNamePitstop, documentId);
+                await _tablePitstop.ExecuteAsync(replaceOperation);
 
-                Document document = await _client.ReadDocumentAsync(documentUri);
-
-                await _client.ReplaceDocumentAsync(document.SelfLink, pitstop);
-
-                return Ok(document.Id);
+                return Ok(pitstop);
             }
             return NotFound();
         }
@@ -213,20 +225,33 @@ namespace JourneyNotesAPI.Controllers
             string UserID = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
             //string UserID = "666";
 
-            FeedOptions queryOptions = new FeedOptions { MaxItemCount = -1 };
-            IQueryable<Pitstop> query = _client.CreateDocumentQuery<Pitstop>(
-            UriFactory.CreateDocumentCollectionUri(_dbName, _collectionNamePitstop),
-            //$"SELECT * FROM C WHERE C.PitstopId = {PitstopId} AND C.PersonId = {person}", queryOptions);
-            $"SELECT * FROM C where C.TripId = {TripId} AND C.PersonId = '{UserID}' AND C.PitstopId = {PitstopId}", queryOptions);
-            var pitstop = query.ToList().FirstOrDefault();
+            List<PitstopTableEntity> pitstopList = new List<PitstopTableEntity>();
+
+            TableQuery<PitstopTableEntity> queryPitstop = new TableQuery<PitstopTableEntity>().Where(TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, TripId.ToString() + ";" + UserID));
+
+            TableContinuationToken tokenPitstop = null;
+
+            do
+            {
+                TableQuerySegment<PitstopTableEntity> resultSegment = await _tablePitstop.ExecuteQuerySegmentedAsync(queryPitstop, tokenPitstop);
+                tokenPitstop = resultSegment.ContinuationToken;
+
+                foreach (PitstopTableEntity entity in resultSegment.Results)
+                {
+                    if(entity.PitstopId == PitstopId)
+                        pitstopList.Add(entity);
+                }
+            } while (tokenPitstop != null);
+
+            var pitstop = pitstopList.FirstOrDefault();
 
             if (pitstop != null)
             {
                 try
                 {
-                    string DbId = pitstop.id;
-                    await _client.DeleteDocumentAsync(
-                     UriFactory.CreateDocumentUri(_dbName, _collectionNamePitstop, DbId));
+                    string removedPitstop = await TripsController.RemovePitstopImagesFromBlob(pitstop, _container);
+                    TableOperation deleteOperation = TableOperation.Delete(pitstop);
+                    await _tablePitstop.ExecuteAsync(deleteOperation);
                     return Ok($"Deleted pitstop {PitstopId}");
                 }
                 catch (DocumentClientException de)

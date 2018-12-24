@@ -36,7 +36,8 @@ namespace JourneyNotesAPI
             //    // This lambda determines whether user consent for non-essential cookies is needed for a given request.
             //    options.CheckConsentNeeded = context => true;
             //    options.MinimumSameSitePolicy = SameSiteMode.None;
-            //});
+            //});'
+            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
 
             services.AddAuthentication(options =>
             {
@@ -97,7 +98,7 @@ namespace JourneyNotesAPI
 
                 // XML Documentation:
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, "JourneyNotesAPI.xml");
-                c.IncludeXmlComments(xmlPath);
+               // c.IncludeXmlComments(xmlPath);
             });
         }
 
@@ -117,19 +118,20 @@ namespace JourneyNotesAPI
             app.UseHttpsRedirection();
             app.UseStaticFiles();
             app.UseCookiePolicy();
-        // Swagger:
+
+            app.UseCors("MyPolicy");
+            //Auth0
+            app.UseAuthentication();
+
+            app.UseMvc();
+
+            // Swagger:
             app.UseSwagger();
             app.UseSwaggerUI(c =>
             {
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "JourneyNotes API");
             });
 
-            app.UseCors("MyPolicy");
-          
-            //Auth0
-            app.UseAuthentication();
-
-            app.UseMvc();
         }
     }
 }

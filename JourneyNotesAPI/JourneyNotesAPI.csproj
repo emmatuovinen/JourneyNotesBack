@@ -2,16 +2,20 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
-    <UserSecretsId>ed1461b9-bce9-47c5-a57a-7a572e4a6e09</UserSecretsId>
+    <UserSecretsId>dbce2c63-ba6c-4722-a20b-64612f33999c</UserSecretsId>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DocumentationFile>C:\work\LOPPUPROJEKTI\JourneyNotesBack\JourneyNotesAPI\JourneyNotesAPI.xml</DocumentationFile>
+    <DocumentationFile></DocumentationFile>
     <NoWarn>1701;1702;1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="wwwroot\" />
+    <Content Remove="wwwroot\XmlDocument.xml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="wwwroot\XmlDocument.xml" />
   </ItemGroup>
 
   <ItemGroup>
