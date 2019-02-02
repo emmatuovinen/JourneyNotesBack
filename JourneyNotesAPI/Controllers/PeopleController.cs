@@ -244,11 +244,11 @@ namespace JourneyNotesAPI.Controllers
         {
             string smallImageName = trip.MainPhotoSmallUrl;
             string largeImageName = trip.MainPhotoUrl;
-          //  CloudBlockBlob smallImage = container.GetBlockBlobReference(smallImageName);
+             CloudBlockBlob smallImage = container.GetBlockBlobReference(smallImageName);
             CloudBlockBlob largeImage = container.GetBlockBlobReference(largeImageName);
 
-            //using (var deleteStream = await smallImage.OpenReadAsync()) { }
-            //await smallImage.DeleteIfExistsAsync();
+            using (var deleteStream = await smallImage.OpenReadAsync()) { }
+            await smallImage.DeleteIfExistsAsync();
 
             using (var deleteStream = await largeImage.OpenReadAsync()) { }
             await largeImage.DeleteIfExistsAsync();
@@ -262,15 +262,15 @@ namespace JourneyNotesAPI.Controllers
             string mediumImageName = pitstop.PhotoMediumUrl;
             string largeImageName = pitstop.PhotoLargeUrl;
 
-            //CloudBlockBlob smallImage = container.GetBlockBlobReference(smallImageName);
-            //CloudBlockBlob mediumImage = container.GetBlockBlobReference(mediumImageName);
+            CloudBlockBlob smallImage = container.GetBlockBlobReference(smallImageName);
+            CloudBlockBlob mediumImage = container.GetBlockBlobReference(mediumImageName);
             CloudBlockBlob largeImage = container.GetBlockBlobReference(largeImageName);
 
-            //using (var deleteStream = await smallImage.OpenReadAsync()) { }
-            //await smallImage.DeleteIfExistsAsync();
+            using (var deleteStream = await smallImage.OpenReadAsync()) { }
+            await smallImage.DeleteIfExistsAsync();
 
-            //using (var deleteStream = await mediumImage.OpenReadAsync()) { }
-            //await mediumImage.DeleteIfExistsAsync();
+            using (var deleteStream = await mediumImage.OpenReadAsync()) { }
+            await mediumImage.DeleteIfExistsAsync();
 
             using (var deleteStream = await largeImage.OpenReadAsync()) { }
             await largeImage.DeleteIfExistsAsync();
