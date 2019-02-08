@@ -139,6 +139,10 @@ namespace JourneyNotesAPI.Controllers
                 pitstop.Title = newPitstop.Title;
                 pitstop.Note = newPitstop.Note;
                 pitstop.PitstopDate = newPitstop.PitstopDate;
+                if (pitstop.PitstopDate.Year.Equals(0001))
+                {
+                    pitstop.PitstopDate = DateTime.Now;
+                }
                 pitstop.PhotoLargeUrl = photoName; // will be replaced with the url to the resized image.
                 pitstop.PhotoMediumUrl = string.Empty; // will be updated when the image has been resized.
                 pitstop.PhotoSmallUrl = string.Empty; // will be updated when the image has been resized.

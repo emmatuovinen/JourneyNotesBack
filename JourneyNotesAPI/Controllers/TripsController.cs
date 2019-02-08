@@ -246,6 +246,10 @@ namespace JourneyNotesAPI.Controllers
             trip.Description = newTrip.Description;
             trip.StartDate = newTrip.StartDate;
             trip.EndDate = newTrip.EndDate;
+            if(trip.EndDate.Year.Equals(0001))
+            {
+                trip.EndDate = trip.StartDate;
+            }
             trip.Position = newTrip.Position;
             trip.MainPhotoUrl = photoName;  // this needs to be updated! And the picture will be deleted at some point - we will not store huge pics.
             trip.MainPhotoSmallUrl = string.Empty;
@@ -300,6 +304,10 @@ namespace JourneyNotesAPI.Controllers
                 trip.Description = editedTrip.Description;
                 trip.StartDate = editedTrip.StartDate;
                 trip.EndDate = editedTrip.EndDate;
+                if (trip.EndDate.Year.Equals(0001))
+                {
+                    trip.EndDate = trip.StartDate;
+                }
                 trip.Position = trip.Position;
                 trip.MainPhotoUrl = editedTrip.MainPhotoUrl;  // this needs to be updated! And the picture will be deleted at some point - we will not store huge pics.
                 trip.MainPhotoSmallUrl = editedTrip.MainPhotoSmallUrl;
